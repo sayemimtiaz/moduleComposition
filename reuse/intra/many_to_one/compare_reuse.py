@@ -17,7 +17,7 @@ from sklearn.utils import shuffle
 from data_type.constants import Constants
 from evaluation.accuracy_computer import getModulePredictionAnyToOneUnrolled
 from util.common import trainModelAndPredictInBinary, initModularLayers, repopulateModularWeights
-from util.nltk_util import binarize_clinc_oos, loadClincOos
+from util.data_util import binarize_clinc_oos, loadClincOos
 
 Constants.enableUnrollMode()
 activation = 'lstm_models'

@@ -17,7 +17,7 @@ from data_type.constants import Constants
 from evaluation.accuracy_computer import getModulePredictionAnyToManyUnrolled, getModulePredictionAnyToMany
 from util.common import initModularLayers, repopulateModularWeights, binarize_multi_label, \
     trainModelAndPredictInBinaryForManyOutput
-from util.nltk_util import load_pos_tagged_dataset, binarize_pos_tagged
+from util.data_util import load_pos_tagged_dataset, binarize_pos_tagged
 
 Constants.enableUnrollMode()
 

@@ -1,9 +1,12 @@
 import math
 import os
+import time
 
 import numpy as np
 import scipy
-from keras.layers import Dense, TimeDistributed, RepeatVector, LSTM, GRU, Dropout
+from keras import Input, Model
+from keras.callbacks import EarlyStopping
+from keras.layers import Dense, TimeDistributed, RepeatVector, LSTM, GRU, Dropout, Concatenate, Flatten, Average
 from keras.models import load_model
 from sklearn.metrics import accuracy_score
 import pandas as pd
@@ -192,22 +195,87 @@ def repopulateModularWeights(modularLayers, module_dir, moduleNo, only_decoder=F
             modularLayers[layerNo].DB = module.layers[layerNo].get_weights()
 
 
-def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, epochs=5, batch_size=32, verbose=0
+def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, epochs=100, batch_size=32, verbose=0
                                  , nb_classes=2, activation='softmax'):
     model = load_model(modelPath)
     model.pop()
     model.add(Dense(units=nb_classes, activation=activation, name='output'))
 
+    model.compile(loss='categorical_crossentropy',
+                  optimizer='adam',
+                  metrics=['accuracy'])
+
+    es = EarlyStopping(monitor='val_accuracy', mode='max', patience=2)
+    start = time.time()
     model.fit(X_train, Y_train,
               epochs=epochs,
               batch_size=batch_size,
-              verbose=verbose)
-    # pred = model.predict(X_test[:len(Y_test)])
-    from evaluation.accuracy_computer import getMonolithicModelPredictionAnyToOne
-    pred = getMonolithicModelPredictionAnyToOne(model, X_test, Y_test)
+              validation_split=0.2,
+              verbose=verbose,
+              callbacks=[es])
+    end = time.time()
+    pred = model.predict(X_test[:len(Y_test)])
+    # from evaluation.accuracy_computer import getMonolithicModelPredictionAnyToOne
+    # pred = getMonolithicModelPredictionAnyToOne(model, X_test, Y_test)
     pred = pred.argmax(axis=-1)
     score = accuracy_score(pred, Y_test[:len(Y_test)])
-    return score
+    return score, end - start
+
+
+def compose_dynamically_and_train(module1, module2, X_train, Y_train, X_test, Y_test, epochs=100, batch_size=32,
+                                  verbose=0
+                                  , nb_classes=2, activation='softmax'):
+    inputLayer = Input(shape=(28, 28))
+
+    flat = Flatten()(inputLayer)
+
+    s1_x1 = Dense(256, activation='relu', trainable=False,
+                  weights=module1.layers[1].get_weights())(flat)
+    s1_x2 = Dense(512, activation='relu', trainable=False,
+                  weights=module1.layers[2].get_weights())(s1_x1)
+    s1_x3 = Dense(1024, activation='relu', trainable=False,
+                  weights=module1.layers[3].get_weights())(s1_x2)
+    s1_x4 = Dense(2048, activation='relu', trainable=False,
+                  weights=module1.layers[4].get_weights())(s1_x3)
+
+    s2_x1 = Dense(256, activation='relu', trainable=False,
+                  weights=module2.layers[1].get_weights())(flat)
+    s2_x2 = Dense(512, activation='relu', trainable=False,
+                  weights=module2.layers[2].get_weights())(s2_x1)
+    s2_x3 = Dense(1024, activation='relu', trainable=False,
+                  weights=module2.layers[3].get_weights())(s2_x2)
+    s2_x4 = Dense(2048, activation='relu', trainable=False,
+                  weights=module2.layers[4].get_weights())(s2_x3)
+
+    concatted = Concatenate()([s1_x4, s2_x4])
+    # concatted = Average()([s1_x4, s2_x4])
+
+    output = Dense(units=nb_classes, activation=activation)(concatted)
+
+    model = Model(inputs=inputLayer, outputs=output)
+
+    model.compile(loss='categorical_crossentropy',
+                  optimizer='adam',
+                  metrics=['accuracy'])
+    es = EarlyStopping(monitor='val_accuracy', mode='max', patience=2)
+
+    start = time.time()
+
+    model.fit(X_train, Y_train,
+              epochs=epochs,
+              batch_size=batch_size,
+              validation_split=0.2,
+              verbose=verbose,
+              callbacks=[es])
+
+    end = time.time()
+
+    pred = model.predict(X_test[:len(Y_test)])
+    # from evaluation.accuracy_computer import getMonolithicModelPredictionAnyToOne
+    # pred = getMonolithicModelPredictionAnyToOne(model, X_test, Y_test)
+    pred = pred.argmax(axis=-1)
+    score = accuracy_score(pred, Y_test[:len(Y_test)])
+    return score, end - start
 
 
 def trainModelAndPredictInBinaryForManyOutput(modelPath, X_train, Y_train, X_test, Y_test, epochs=5, batch_size=32,
@@ -463,7 +531,7 @@ def calculate_active_rate_rolled(observed_values, refLayer):
         inactiveCount = 0
         activeCount = 0
         for o in observed_values:
-            if o[:, nodeNum] <= 0.0:
+            if o[nodeNum] <= 0.0:
                 inactiveCount += 1
             else:
                 activeCount += 1
@@ -488,6 +556,6 @@ def calculate_active_rate_unrolled(observed_values, refLayer):
 
 
 def extract_model_name(model_path):
-    if model_path.find('/')!=-1:
-        model_path=model_path[model_path.rindex('/')+1:]
+    if model_path.find('/') != -1:
+        model_path = model_path[model_path.rindex('/') + 1:]
     return model_path[:-3]

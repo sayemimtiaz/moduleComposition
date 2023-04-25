@@ -12,8 +12,8 @@ from keras.models import load_model
 from evaluation.accuracy_computer import getModulePredictionAnyToOneUnrolled, getMonolithicModelAccuracyAnyToMany, \
     getMonolithicModelAccuracyAnyToOne
 from evaluation.jaccard_computer import findMeanJaccardIndexRolled
-from relu_models.one_to_one.one_to_one_util import load_math_dataset, load_math_dataset_with_toxic
 from util.common import initModularLayers, repopulateModularWeights, extract_model_name
+from util.data_util import get_mnist_data, get_fmnist_data
 
 
 def evaluate_rolled(model_name):
@@ -23,10 +23,8 @@ def evaluate_rolled(model_name):
     print(model_path)
     model_name = os.path.join(model_path, model_name)
 
-    if 'combined' not in model_name:
-        xT, xt, yT, yt, num_words, timestep, nb_classes = load_math_dataset(hot_encode=False)
-    else:
-        xT, xt, yT, yt, num_words, timestep, nb_classes = load_math_dataset_with_toxic(hot_encode=False)
+    # xT, yT, xt, yt, nb_classes = get_mnist_data(hot=False)
+    xT, yT, xt, yt, nb_classes = get_fmnist_data(hot=False)
 
     labs = range(0, nb_classes)
     model = load_model(model_name)

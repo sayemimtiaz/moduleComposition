@@ -23,7 +23,7 @@ from relu_models.one_to_one.one_to_one_util import load_math_dataset, unarize_ma
     load_math_dataset_with_toxic
 from util.common import initModularLayers, repopulateModularWeights, binarize_multi_label, \
     trainModelAndPredictInBinaryForManyOutput, trainModelAndPredictInBinary
-from util.nltk_util import load_pos_tagged_dataset_with_clinc, loadClincOosWithPosTag
+from util.data_util import load_pos_tagged_dataset_with_clinc, loadClincOosWithPosTag
 
 activation = 'lstm_models'
 modelName = 'model1_combined'

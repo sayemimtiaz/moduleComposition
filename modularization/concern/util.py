@@ -557,3 +557,40 @@ def removeAndTangleConcernBasedActiveStat(layerPos, layerNeg, timestep=None, tan
         else:
             keepCount += 1
             keepNode(layerPos, timestep, nodeNum)
+
+
+def removeAndTangleConcernBasedActiveStat(layerPos, layerNeg, timestep=None, tangleThreshold=-1.0,
+                                          maxRemove=0.2):
+    d = {}
+    num_node = layerPos.num_node
+
+    for nodeNum in range(num_node):
+        if timestep is not None:
+            d[nodeNum] = layerPos.median_node_val[timestep][:, nodeNum] - \
+                         layerNeg.median_node_val[timestep][:, nodeNum]
+        else:
+            d[nodeNum] = layerPos.median_node_val[:, nodeNum] - layerNeg.median_node_val[:, nodeNum]
+
+    removeCount = 0
+    keepCount = 0
+
+    d = {k: v for k, v in
+         sorted(d.items(), key=lambda item: item[1])}
+    removedSet = set()
+    for nodeNum in d.keys():
+
+        removeFlag = False
+        if d[nodeNum] <= tangleThreshold:
+            removeFlag = True
+
+        if removeCount / layerPos.num_node >= maxRemove:
+            removeFlag = False
+
+        if removeFlag:
+            removeCount += 1
+            removedSet.add(nodeNum)
+            removeNode(layerPos, timestep, nodeNum)
+
+        else:
+            keepCount += 1
+            keepNode(layerPos, timestep, nodeNum)

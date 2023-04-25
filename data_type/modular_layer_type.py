@@ -77,7 +77,7 @@ class ModularLayer:
             if self.type == LayerType.Dense or self.type == LayerType.TimeDistributed:
                 self.W, self.B = layer.get_weights()
                 self.initRegularModularWeights()
-                # self.node_sum = np.array([0.0] * self.num_node)
+                self.median_node_val = np.array([0.0] * self.num_node).reshape(1, self.num_node)
 
             if self.type == LayerType.Embedding:
                 self.W = layer.get_weights()[0]
