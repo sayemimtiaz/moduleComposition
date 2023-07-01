@@ -11,7 +11,7 @@ from keras.models import load_model
 import itertools
 
 from evaluation.accuracy_computer import getMonolithicModelPredictionAnyToOne
-from relu_models.one_to_one.one_to_one_util import *
+from dynamic_composer.one_to_one.one_to_one_util import *
 from sklearn.metrics import accuracy_score
 
 from util.common import trainModelAndPredictInBinary

@@ -1,0 +1,36 @@
+
+A MNIST module. Let's call it A
+
+A ImageNet module, Let's call it B
+
+When an imagenet data I is given to A. The behavior of A is uncertain as A has never seen I during training. 
+
+Solutions:
+
+1. Fine-tune A with a sample of I. It will extend negative knowledge of the A. Challenges are to avoid catastropic forgetting.
+
+2. Estimate the uncertainty of prediction to use it as an additional metric.
+
+If we can reduce the loss in inter-dataset composition, then, people can reuse model artifacts more reliably.
+
+
+----------------------------------------
+Motivation:
+Imagine, a model recognizes digits and another alphabets. What if we need to recognize both?
+Imagine, a japanese authority wants to build a model which recognize both english and japapnense digits. Usually, they will have to collect datasets for both and train from scratch.
+What if there is already a model that recognizes english digits and another japanese? We can compose them together.
+
+Datasets:
+MNIST, FMNIST, EMNIST, KMNIST
+
+Experiment design:
+
+1. Show the modularized accuracy for all (After applying different composition techniques)
+
+2. Taking the same experiment design for reuse and replace as FSE'20 paper: on decomposing ...
+
+	MNIST vs. EMNIST
+
+	MNIST vs. KMNIST
+
+Baselines are: Training from scratch and FSE'20 result

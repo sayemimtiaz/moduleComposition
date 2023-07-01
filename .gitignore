@@ -131,7 +131,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-relu_models/modules/*
-relu_models/h5/*
-relu_models/modules/
-relu_models/h5/
+modules/*
+h5/*
+modules/
+h5/

@@ -16,7 +16,7 @@ from sklearn.utils import shuffle
 
 from data_type.constants import Constants
 from evaluation.accuracy_computer import getModulePredictionAnyToManyUnrolled, getModulePredictionAnyToMany
-from relu_models.one_to_many.one_to_many_util import load_toxic_dataset, binarize_toxic_dataset, unarize_toxic_dataset
+from dynamic_composer.one_to_many.one_to_many_util import load_toxic_dataset, binarize_toxic_dataset, unarize_toxic_dataset
 from util.common import initModularLayers, repopulateModularWeights, binarize_multi_label, \
     trainModelAndPredictInBinaryForManyOutput
 

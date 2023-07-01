@@ -3,6 +3,7 @@ import math
 from data_type.constants import ALL_GATE
 from data_type.enums import LayerType
 from util.common import isNodeActive, isIntrinsicallyTrainableLayer
+import numpy as np
 
 
 def updateNodeConcernForRnn(layer):
@@ -564,6 +565,8 @@ def removeAndTangleConcernBasedActiveStat(layerPos, layerNeg, timestep=None, tan
     d = {}
     num_node = layerPos.num_node
 
+    mask = np.zeros(num_node, dtype=bool)
+
     for nodeNum in range(num_node):
         if timestep is not None:
             d[nodeNum] = layerPos.median_node_val[timestep][:, nodeNum] - \
@@ -578,6 +581,9 @@ def removeAndTangleConcernBasedActiveStat(layerPos, layerNeg, timestep=None, tan
          sorted(d.items(), key=lambda item: item[1])}
     removedSet = set()
     for nodeNum in d.keys():
+
+        if d[nodeNum] < 0.0:
+            mask[nodeNum] = True
 
         removeFlag = False
         if d[nodeNum] <= tangleThreshold:
@@ -594,3 +600,5 @@ def removeAndTangleConcernBasedActiveStat(layerPos, layerNeg, timestep=None, tan
         else:
             keepCount += 1
             keepNode(layerPos, timestep, nodeNum)
+
+    return mask

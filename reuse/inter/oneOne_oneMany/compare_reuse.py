@@ -16,9 +16,9 @@ from sklearn.utils import shuffle
 
 from data_type.constants import Constants
 from evaluation.accuracy_computer import getModulePredictionAnyToManyUnrolled, getMonolithicModelPredictionAnyToOne
-from relu_models.one_to_many.one_to_many_util import load_toxic_dataset, binarize_toxic_dataset, unarize_toxic_dataset, \
+from dynamic_composer.one_to_many.one_to_many_util import load_toxic_dataset, binarize_toxic_dataset, unarize_toxic_dataset, \
     toxic_dataset_text, load_toxic_dataset_combine_math_qa
-from relu_models.one_to_one.one_to_one_util import load_math_dataset, unarize_math_qa, math_dataset_text, \
+from dynamic_composer.one_to_one.one_to_one_util import load_math_dataset, unarize_math_qa, math_dataset_text, \
     load_math_dataset_with_toxic
 from util.common import initModularLayers, repopulateModularWeights, binarize_multi_label, \
     trainModelAndPredictInBinaryForManyOutput, trainModelAndPredictInBinary, get_max_without
