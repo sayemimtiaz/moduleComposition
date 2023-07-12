@@ -582,8 +582,8 @@ def removeAndTangleConcernBasedActiveStat(layerPos, layerNeg, timestep=None, tan
     removedSet = set()
     for nodeNum in d.keys():
 
-        if d[nodeNum] < 0.0:
-            mask[nodeNum] = True
+        # if d[nodeNum] < 0.0:
+        #     mask[nodeNum] = True
 
         removeFlag = False
         if d[nodeNum] <= tangleThreshold:
@@ -598,6 +598,8 @@ def removeAndTangleConcernBasedActiveStat(layerPos, layerNeg, timestep=None, tan
             removeNode(layerPos, timestep, nodeNum)
 
         else:
+            if d[nodeNum] < 0.0:
+                mask[nodeNum] = True
             keepCount += 1
             keepNode(layerPos, timestep, nodeNum)
 

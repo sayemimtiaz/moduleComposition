@@ -3,6 +3,9 @@ USE_BROWN_CORPUS = True
 USE_TREEBANK_CORPUS = False
 USE_CONLL_CORPUS = False
 ALL_GATE = False
+DEBUG = False
+
+MODEL=None
 
 
 class Constants:

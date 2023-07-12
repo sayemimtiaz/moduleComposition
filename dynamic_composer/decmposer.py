@@ -7,21 +7,28 @@ from modularization.concern.concern_identification import *
 from keras.models import load_model
 
 from dynamic_composer.composer import evaluate_rolled
-from util.data_util import get_fmnist_data, get_mnist_data
+from util.data_util import get_fmnist_data, get_mnist_data, loadTensorFlowDataset
 from util.sampling_util import sample_for_one_output
 
 # initially set unrolled mode , then disable
 Constants.disableUnrollMode()
 
 root = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-model_name = os.path.join(root, 'h5', 'model_mnist.h5')
+model_name = os.path.join(root, 'h5', 'model_kmnist.h5')
 module_path = os.path.join(root, 'modules', extract_model_name(model_name))
 
 firstModel = load_model(model_name)
 concernIdentifier = ConcernIdentification()
 
-x_train, y_train, x_test, y_test, nb_classes = get_mnist_data(hot=False)
-# x_train, y_train, x_test, y_test, nb_classes = get_fmnist_data(hot=False)
+if 'fmnist' in model_name:
+    x_train, y_train, x_test, y_test, nb_classes = get_fmnist_data(hot=False)
+elif 'emnist' in model_name:
+    x_train, y_train, x_test, y_test, nb_classes = loadTensorFlowDataset(datasetName='emnist', hot=False)
+elif 'kmnist' in model_name:
+    x_train, y_train, x_test, y_test, nb_classes = loadTensorFlowDataset(datasetName='kmnist', hot=False)
+else:
+    x_train, y_train, x_test, y_test, nb_classes = get_mnist_data(hot=False)
+
 
 labs = range(0, nb_classes)
 print("Start Time:" + datetime.now().strftime("%H:%M:%S"))
@@ -91,6 +98,8 @@ for j in labs:
                 layerMask[1] = True
             else:
                 layerMask[j] = True
+                # layerMask[0] = True
+
             tmp_msk = []
             for i in range(prevNumNode):
                 tmp_msk.append(layerMask)
@@ -104,7 +113,8 @@ for j in labs:
             continue
 
         if _layer.type == LayerType.Dense and not _layer.last_layer:
-            model.layers[layerNo].set_weights([_layer.DW, _layer.DB])
+            # model.layers[layerNo].set_weights([_layer.DW, _layer.DB])
+            model.layers[layerNo].set_weights([_layer.W, _layer.B])
             getDeadNodePercent(_layer)
 
         elif _layer.type == LayerType.Embedding:

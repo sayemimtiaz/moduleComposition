@@ -1,89 +1,86 @@
 import os
-import pickle
 
 from keras.models import load_model
-from keras.utils import to_categorical
-import numpy as np
-from sklearn.metrics import accuracy_score
+from update_concern.ewc_util import update, evaluate_composition
+from util.data_util import get_mnist_data, get_fmnist_data
 
-from update_concern.ewc_trainer import train
-from util.data_util import get_mnist_data, get_fmnist_data, unarize, sample
+total_run=10
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-DO_UPDATE = True
-old_dataset = 'mnist'
-new_dataset = 'fmnist'
-positiveModule = 1
-negativeModule = 0
+mnist_mod = None
+fmnist_mod = None
+dataset_A = 'mnist'
+dataset_B = 'fmnist'
 
-module = load_model(os.path.join(base_path, 'modules', 'model_' + old_dataset,
-                                 'module' + str(positiveModule) + '.h5'))
+if dataset_A == 'mnist':
+    A_train_x, A_train_y, A_test_x, A_test_y, A_num_classes = get_mnist_data(hot=False)
+if dataset_A == 'fmnist':
+    A_train_x, A_train_y, A_test_x, A_test_y, A_num_classes = get_fmnist_data(hot=False)
+if dataset_B == 'fmnist':
+    B_train_x, B_train_y, B_test_x, B_test_y, B_num_classes = get_fmnist_data(hot=False)
+if dataset_B == 'mnist':
+    B_train_x, B_train_y, B_test_x, B_test_y, B_num_classes = get_mnist_data(hot=False)
 
-if old_dataset == 'mnist':
-    old_train_x, old_train_y, old_test_x, old_test_y, old_num_classes = get_mnist_data(hot=False)
-    # _, _, test_x1, test_y1 = unarize(old_train_x, old_train_y, old_test_x, old_test_y,
-    #                                        positiveModule, positiveModule)
+result={}
+for rn in range(total_run):
+    A_updated_modules = {}
+    for A_cN in range(A_num_classes):
 
-    temp_y = []
-    for i in range(len(old_test_x)):
-        if old_test_y[i] == positiveModule:
-            temp_y.append(positiveModule)
-        else:
-            temp_y.append(negativeModule)
+        if mnist_mod is not None and mnist_mod != A_cN:
+            continue
 
-    old_test_y = temp_y
+        module_A = load_model(os.path.join(base_path, 'modules', 'model_' + dataset_A,
+                                           'module' + str(A_cN) + '.h5'))
+        positiveModule = A_cN
+        negativeModule = 0
+        if A_cN == 0:
+            negativeModule = 1
 
-    # sample_only_classes = []
-    # for i in range(old_num_classes):
-    #     if i == positiveModule:
-    #         sample_only_classes.append(i)
-    # old_train_x, old_train_y = sample((old_train_x, old_train_y),
-    #                                   balance=True, num_sample=1500, sample_only_classes=sample_only_classes)
-    # temp_y = []
-    # for i in range(len(old_train_y)):
-    #     temp_y.append(negativeModule)
-    # old_train_y = temp_y
+        update(module_A, A_train_x, A_train_y, B_train_x, B_train_y, positiveModule, negativeModule,
+               dataset_A, B_num_classes)
 
-if new_dataset == 'fmnist':
-    new_train_x, new_train_y, new_test_x, new_test_y, new_num_classes = get_fmnist_data(hot=False)
-    new_train_x, new_train_y = sample((new_train_x, new_train_y), num_classes=new_num_classes,
-                                      balance=True, num_sample=500)
+        A_updated_modules[A_cN] = module_A
 
-    temp_y = []
-    for i in range(len(new_train_x)):
-        temp_y.append(negativeModule)
-    new_train_y = to_categorical(temp_y, new_num_classes)
+    B_updated_modules = {}
+    for B_cN in range(B_num_classes):
 
-    temp_y = []
-    for i in range(len(new_test_x)):
-        temp_y.append(negativeModule)
-    new_test_y = temp_y
+        if fmnist_mod is not None and fmnist_mod != B_cN:
+            continue
 
-if DO_UPDATE:
-    with open(os.path.join(base_path, 'modules', 'model_' + old_dataset,
-                           'mask' + str(positiveModule) + '.pickle'), 'rb') as handle:
-        mask = pickle.load(handle)
-        # mask=None
-        use_fim = True
-        use_ewc = False
-    train(module, (new_train_x, new_train_y), (old_train_x, old_train_y),
-          use_fim=use_fim, use_ewc=use_ewc, ewc_samples=500, prior_mask=mask,
-          fim_samples=500)
+        module_B = load_model(os.path.join(base_path, 'modules', 'model_' + dataset_B,
+                                           'module' + str(B_cN) + '.h5'))
+        positiveModule = B_cN
+        negativeModule = 0
+        if B_cN == 0:
+            negativeModule = 1
 
-test_x = np.concatenate((old_test_x, new_test_x))
-test_y = np.concatenate((old_test_y, new_test_y))
+        update(module_B, B_train_x, B_train_y, A_train_x, A_train_y, positiveModule, negativeModule,
+               dataset_B, A_num_classes)
 
-finalPred = []
-p = module.predict(test_x[:len(test_y)])
-for i in range(0, len(test_y)):
-    if p[i][positiveModule] > p[i][negativeModule]:
-        finalPred.append(positiveModule)
-    else:
-        finalPred.append(negativeModule)
+        B_updated_modules[B_cN] = module_B
 
-from sklearn.metrics import accuracy_score
+    rs_rn=evaluate_composition(dataset_A, dataset_B, A_updated_modules, B_updated_modules
+                         , (A_train_x, A_train_y, A_test_x, A_test_y, A_num_classes),
+                         (B_train_x, B_train_y, B_test_x, B_test_y, B_num_classes),
+                         updated=True)
+    for c1 in rs_rn.keys():
+        for c2 in rs_rn[c1].keys():
+            if c1 not in result:
+                result[c1]={}
+            if c2 not in result[c1]:
+                result[c1][c2]=0
+            result[c1][c2]+=rs_rn[c1][c2]
 
-score = accuracy_score(finalPred, test_y)
+for c1 in result.keys():
+    for c2 in result[c1].keys():
+        result[c1][c2]/=total_run
 
-print(score)
+out = open(os.path.join(base_path, "result", "update.csv"), "w")
+out.write(
+    'Class 1,Class 2,Modularized Accuracy,Trained Model Accuracy\n')
+for c1 in result.keys():
+    for c2 in result[c1].keys():
+        out.write(str(c1) + ',' + str(c2) + ',' + str(result[c1][c2]) + ',' + str(0) + '\n')
+
+out.close()

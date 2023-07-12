@@ -25,7 +25,7 @@ Constants.disableUnrollMode()
 model1 = 'model_mnist'
 model2 = 'model_fmnist'
 
-base_path = os.path.dirname(os.path.realpath(__file__))
+base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 out = open(os.path.join(base_path, "result", "static_"+model1+"_"+model2 + ".csv"), "w")
 # base_path = os.path.dirname(os.path.dirname(os.path.dirname(base_path)))
 module_path1 = os.path.join(base_path, 'modules', model1)

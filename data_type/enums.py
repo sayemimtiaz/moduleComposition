@@ -72,3 +72,4 @@ def getActivationType(layer):
         return ActivationType.Linear
 
     return ActivationType.NotRecognized
+# print(str(ActivationType.Linear.name))

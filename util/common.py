@@ -205,14 +205,17 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
                   optimizer='adam',
                   metrics=['accuracy'])
 
-    es = EarlyStopping(monitor='val_accuracy', mode='max', patience=2)
+    es = EarlyStopping(monitor='val_accuracy', mode='max', patience=3)
+    # es = EarlyStopping(monitor='loss', mode='min', patience=3)
+
     start = time.time()
     model.fit(X_train, Y_train,
               epochs=epochs,
               batch_size=batch_size,
-              validation_split=0.2,
+              validation_split=0.1,
               verbose=verbose,
-              callbacks=[es])
+              callbacks=[es]
+              )
     end = time.time()
     pred = model.predict(X_test[:len(Y_test)])
     # from evaluation.accuracy_computer import getMonolithicModelPredictionAnyToOne
@@ -222,32 +225,55 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
     return score, end - start
 
 
-def compose_dynamically_and_train(module1, module2, X_train, Y_train, X_test, Y_test, epochs=100, batch_size=32,
+def compose_dynamically_and_train(modules, X_train, Y_train, X_test, Y_test, epochs=100, batch_size=32,
                                   verbose=0
-                                  , nb_classes=2, activation='softmax'):
+                                  , nb_classes=2, activation='softmax', concatMode='average'):
+    if len(modules) == 0:
+        print('No modules to compose')
+        return
+
     inputLayer = Input(shape=(28, 28))
 
     flat = Flatten()(inputLayer)
 
-    s1_x1 = Dense(256, activation='relu', trainable=False,
-                  weights=module1.layers[1].get_weights())(flat)
-    s1_x2 = Dense(512, activation='relu', trainable=False,
-                  weights=module1.layers[2].get_weights())(s1_x1)
-    s1_x3 = Dense(1024, activation='relu', trainable=False,
-                  weights=module1.layers[3].get_weights())(s1_x2)
-    s1_x4 = Dense(2048, activation='relu', trainable=False,
-                  weights=module1.layers[4].get_weights())(s1_x3)
+    frozen_modules = []
+    for _m in range(len(modules)):
+        myLayers = initModularLayers(modules[_m].layers)
 
-    s2_x1 = Dense(256, activation='relu', trainable=False,
-                  weights=module2.layers[1].get_weights())(flat)
-    s2_x2 = Dense(512, activation='relu', trainable=False,
-                  weights=module2.layers[2].get_weights())(s2_x1)
-    s2_x3 = Dense(1024, activation='relu', trainable=False,
-                  weights=module2.layers[3].get_weights())(s2_x2)
-    s2_x4 = Dense(2048, activation='relu', trainable=False,
-                  weights=module2.layers[4].get_weights())(s2_x3)
+        current = flat
+        for layerNo, _layer in enumerate(myLayers):
+            if _layer.last_layer:
+                continue
+            if _layer.type == LayerType.Dense:
+                current = Dense(_layer.num_node, activation=_layer.activation.name,
+                                weights=modules[_m].layers[layerNo].get_weights(), trainable=False)(current)
+            elif _layer.type == LayerType.Dropout:
+                current = Dropout(modules[_m].layers[layerNo].rate)(current)
 
-    concatted = Concatenate()([s1_x4, s2_x4])
+        frozen_modules.append(current)
+
+    if concatMode == 'average':
+        concatted = Average()(frozen_modules)
+
+    # s1_x1 = Dense(256, activation='relu', trainable=False,
+    #               weights=module1.layers[1].get_weights())(flat)
+    # s1_x2 = Dense(512, activation='relu', trainable=False,
+    #               weights=module1.layers[2].get_weights())(s1_x1)
+    # s1_x3 = Dense(1024, activation='relu', trainable=False,
+    #               weights=module1.layers[3].get_weights())(s1_x2)
+    # s1_x4 = Dense(2048, activation='relu', trainable=False,
+    #               weights=module1.layers[4].get_weights())(s1_x3)
+    #
+    # s2_x1 = Dense(256, activation='relu', trainable=False,
+    #               weights=module2.layers[1].get_weights())(flat)
+    # s2_x2 = Dense(512, activation='relu', trainable=False,
+    #               weights=module2.layers[2].get_weights())(s2_x1)
+    # s2_x3 = Dense(1024, activation='relu', trainable=False,
+    #               weights=module2.layers[3].get_weights())(s2_x2)
+    # s2_x4 = Dense(2048, activation='relu', trainable=False,
+    #               weights=module2.layers[4].get_weights())(s2_x3)
+
+    # concatted = Concatenate()([s1_x4, s2_x4])
     # concatted = Average()([s1_x4, s2_x4])
 
     output = Dense(units=nb_classes, activation=activation)(concatted)
@@ -257,7 +283,7 @@ def compose_dynamically_and_train(module1, module2, X_train, Y_train, X_test, Y_
     model.compile(loss='categorical_crossentropy',
                   optimizer='adam',
                   metrics=['accuracy'])
-    es = EarlyStopping(monitor='val_accuracy', mode='max', patience=2)
+    es = EarlyStopping(monitor='val_accuracy', mode='max', patience=3)
 
     start = time.time()
 

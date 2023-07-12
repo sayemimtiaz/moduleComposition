@@ -2,13 +2,20 @@ import time
 
 import numpy as np
 import tensorflow as tf
+from keras import regularizers
 from keras.losses import sparse_categorical_crossentropy, categorical_crossentropy
 from keras.optimizers import Adam
 
+from data_type.constants import DEBUG
 from update_concern import ewc
 
+model = None
+train_step_fun = None
+gradient_mask = None
+incdet_threshold = None
 
-def report(model, epoch, validation_datasets, batch_size):
+
+def evaluate(model, val_data):
     """
     Print information about training progress. A separate accuracy figure is
     reported for each partition of the validation dataset.
@@ -17,14 +24,9 @@ def report(model, epoch, validation_datasets, batch_size):
     :param validation_datasets: List of NumPy tuples (inputs, labels).
     :param batch_size: Number of inputs to be processed simultaneously.
     """
-    result = []
-    for inputs, labels in validation_datasets:
-        _, accuracy = model.evaluate(inputs, labels, verbose=0,
-                                     batch_size=batch_size)
-        result.append("{:.2f}".format(accuracy * 100))
+    _, accuracy = model.evaluate(val_data[0], val_data[1], verbose=0)
 
-    # Add 1: assuming that we report after training has finished for this epoch.
-    print(epoch + 1, "\t", "\t".join(result))
+    return accuracy
 
 
 def compile_model(model, learning_rate, extra_losses=None):
@@ -42,39 +44,52 @@ def compile_model(model, learning_rate, extra_losses=None):
         optimizer=Adam(learning_rate=learning_rate),
         metrics=["accuracy"]
     )
+    return model
 
 
-def train_epoch(model, train_data, batch_size,
+# @tf.function
+def train_step(inputs, labels):
+    with tf.GradientTape() as tape:
+        outputs = model(inputs)
+        loss = model.compiled_loss(labels, outputs)
+
+    gradients = tape.gradient(loss, model.trainable_weights)
+    # # Don't allow gradients to propagate to weights which are important.
+    if gradient_mask is not None:
+        gradients = ewc.apply_mask(gradients, gradient_mask)
+
+    # Squash some of the very large gradients which EWC can create.
+    if incdet_threshold is not None:
+        gradients = ewc.clip_gradients(gradients, incdet_threshold)
+
+    model.optimizer.apply_gradients(zip(gradients, model.trainable_weights))
+    return loss
+
+
+def train_epoch(train_data, batch_size,
                 gradient_mask=None, incdet_threshold=None):
+    global train_step_fun
     """Need a custom training loop for when we modify the gradients."""
     dataset = tf.data.Dataset.from_tensor_slices(train_data)
     dataset = dataset.shuffle(len(train_data[0])).batch(batch_size)
+    # print('train_epoch called')
 
+    overall_loss = tf.keras.metrics.Mean()
     for inputs, labels in dataset:
-        with tf.GradientTape() as tape:
-            outputs = model(inputs)
-            loss = model.compiled_loss(labels, outputs)
+        loss = train_step_fun(inputs, labels)
+        overall_loss.update_state(loss)
+        # for variable in model.trainable_variables:
+        #     if tf.reduce_any(tf.math.is_nan(variable)):
+        #         print('Nan weights detected')
+        #         break
 
-        gradients = tape.gradient(loss, model.trainable_weights)
-
-        # Don't allow gradients to propagate to weights which are important.
-        if gradient_mask is not None:
-            # start = time.time()
-            gradients = ewc.apply_mask(gradients, gradient_mask)
-            # end = time.time()
-            # print(end - start)
-
-        # Squash some of the very large gradients which EWC can create.
-        if incdet_threshold is not None:
-            gradients = ewc.clip_gradients(gradients, incdet_threshold)
-
-        model.optimizer.apply_gradients(zip(gradients, model.trainable_weights))
+    return overall_loss.result().numpy()
 
 
-def train(model, new_data, old_data, epochs=5, batch_size=32, learning_rate=1e-3,
-          use_ewc=False, ewc_lambda=1, ewc_samples=100, prior_mask = None,
+def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, learning_rate=1e-3,
+          use_ewc=False, ewc_lambda=1, ewc_samples=100, prior_mask=None,
           use_fim=False, fim_threshold=1e-3, fim_samples=100,
-          use_incdet=False, incdet_threshold=None):
+          use_incdet=False, incdet_thres=1e-9, patience=3):
     """
     Train a model using a complete dataset.
     :param model: Model to be trained.
@@ -91,10 +106,11 @@ def train(model, new_data, old_data, epochs=5, batch_size=32, learning_rate=1e-3
     :param use_incdet: Should IncDet (incremental detection) be used?
     :param incdet_threshold: Threshold for IncDet gradient clipping.
     """
-
+    global model, train_step_fun, gradient_mask, incdet_threshold
     start = time.time()
+    incdet_threshold = incdet_thres
 
-    compile_model(model, learning_rate)
+    model = compile_model(_model, learning_rate)
 
     regularisers = []
     gradient_mask = None
@@ -108,20 +124,79 @@ def train(model, new_data, old_data, epochs=5, batch_size=32, learning_rate=1e-3
         compile_model(model, learning_rate, extra_losses=regularisers)
     # If using FIM, determine which weights must be frozen to preserve
     # performance on the current dataset.
-    elif use_fim:
+    if use_fim:
         new_mask = ewc.fim_mask(model, old_data, fim_samples,
                                 fim_threshold)
         gradient_mask = ewc.combine_masks(gradient_mask, new_mask)
 
     if prior_mask is not None:
         gradient_mask = ewc.combine_masks(gradient_mask, prior_mask)
+        adjust = 0
+        freeze = 0
+        for _m1 in gradient_mask:
+            na = _m1.numpy()
+            adjust += na.sum()
+            if len(na.shape) == 2:
+                freeze += (na.shape[0] * na.shape[1]) - na.sum()
+            else:
+                freeze += na.shape[0] - na.sum()
+        if DEBUG:
+            print(adjust, freeze)
+
+        # if adjust == 0:
+        #     return 0
+        if DEBUG:
+            print('Adjustment rate: ' + str((adjust / (adjust + freeze)) * 100.0) + '%')
+
+    wait = 0
+    priorAccuracy = evaluate(model, val_data)
+    if DEBUG:
+        print('Accuracy before training: ' + str(priorAccuracy))
+    actualEpoch = 0
+    best_weights = model.get_weights()
+    priorLoss = None
+    improved = False
+    # model.fit(new_data[0], new_data[1],
+    #           epochs=epochs,
+    #           batch_size=batch_size,
+    #           verbose=0,
+    #           )
+
+    train_step_fun = tf.function(train_step)
+    # train_step_fun=train_step
 
     for epoch in range(epochs):
-        train_epoch(model, new_data, batch_size,
-                    gradient_mask=gradient_mask,
-                    incdet_threshold=incdet_threshold)
+        currentLoss = train_epoch(new_data, batch_size,
+                                  gradient_mask=gradient_mask,
+                                  incdet_threshold=incdet_threshold)
+        currentAccuracy = evaluate(model, val_data)
+        # print('Epoch: ' + str(epoch) + ' - ' + str(currentAccuracy))
+        wait += 1
+        if currentAccuracy > priorAccuracy:
+            # if priorLoss is None:
+            #     wait = 0
+            # elif currentLoss < priorLoss:
+            wait = 0
+            improved = True
+            best_weights = model.get_weights()
+
+        if wait >= patience and epoch > 0:
+            if improved:
+                model.set_weights(best_weights)
+            break
+
+        priorAccuracy = currentAccuracy
+        priorLoss = currentLoss
+        actualEpoch += 1
 
         # report(model, epoch, valid_sets, batch_size)
     end = time.time()
-    print("Took: "+ str(end - start)+" sec")
 
+    del train_step_fun
+    train_step_fun = None
+    if DEBUG:
+        print("Took: " + str(end - start) + " sec")
+        print('Actual epoch: ' + str(actualEpoch))
+        print('Accuracy after training: ' + str(evaluate(model, val_data)))
+
+    return end - start

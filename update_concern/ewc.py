@@ -31,7 +31,7 @@ def fisher_matrix(model, dataset, samples):
         # Collect gradients.
         with tf.GradientTape() as tape:
             output = model(data)
-            log_likelihood = tf.math.log(output)
+            log_likelihood = tf.math.log(output+1e-9)
 
         gradients = tape.gradient(log_likelihood, weights)
 
