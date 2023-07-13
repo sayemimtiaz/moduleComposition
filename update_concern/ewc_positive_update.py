@@ -9,9 +9,9 @@ from util.data_util import load_data_by_name, \
     sample_and_combine_train_positive, sample_and_combine_test_positive, sample, unarize
 
 disableScratchTrain = False
-is_load_combo = True
+is_load_combo = False
 mode = 'update'
-total_combination = 100
+total_combination = 19
 total_repeat = 1
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 
@@ -26,7 +26,7 @@ scratchDict = {}
 scratch_time = {}
 
 if not is_load_combo:
-    combos = get_combos(data, datasets, total_combination, _seed=7)
+    combos = get_combos(data, datasets, total_combination, _seed=11)
 else:
     combos, scratchDict, scratch_time = load_combos()
 
