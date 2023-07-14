@@ -237,20 +237,23 @@ def compose_dynamically_and_train(modules, X_train, Y_train, X_test, Y_test, epo
     flat = Flatten()(inputLayer)
 
     frozen_modules = []
-    for _m in range(len(modules)):
-        myLayers = initModularLayers(modules[_m].layers)
 
-        current = flat
-        for layerNo, _layer in enumerate(myLayers):
-            if _layer.last_layer:
-                continue
-            if _layer.type == LayerType.Dense:
-                current = Dense(_layer.num_node, activation=_layer.activation.name,
-                                weights=modules[_m].layers[layerNo].get_weights(), trainable=False)(current)
-            elif _layer.type == LayerType.Dropout:
-                current = Dropout(modules[_m].layers[layerNo].rate)(current)
+    for _d in modules:
+        for _c in modules[_d]:
 
-        frozen_modules.append(current)
+            myLayers = initModularLayers(modules[_d][_c].layers)
+
+            current = flat
+            for layerNo, _layer in enumerate(myLayers):
+                if _layer.last_layer:
+                    continue
+                if _layer.type == LayerType.Dense:
+                    current = Dense(_layer.num_node, activation=_layer.activation.name.lower(),
+                                    weights=modules[_d][_c].layers[layerNo].get_weights(), trainable=False)(current)
+                elif _layer.type == LayerType.Dropout:
+                    current = Dropout(modules[_d][_c].layers[layerNo].rate)(current)
+
+            frozen_modules.append(current)
 
     if concatMode == 'average':
         concatted = Average()(frozen_modules)
@@ -296,7 +299,7 @@ def compose_dynamically_and_train(modules, X_train, Y_train, X_test, Y_test, epo
 
     end = time.time()
 
-    pred = model.predict(X_test[:len(Y_test)])
+    pred = model.predict(X_test[:len(Y_test)], verbose=0)
     # from evaluation.accuracy_computer import getMonolithicModelPredictionAnyToOne
     # pred = getMonolithicModelPredictionAnyToOne(model, X_test, Y_test)
     pred = pred.argmax(axis=-1)

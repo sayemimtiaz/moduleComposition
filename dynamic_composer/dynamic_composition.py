@@ -33,7 +33,7 @@ for _cmb in combos.keys():
     comboList.append(tList)
 
 for rpi in range(total_repeat):
-    out = open(os.path.join(base_path, "result", "all_combos.csv"), "w")
+    out = open(os.path.join(base_path, "result", mode + "_repeat_" + str(rpi) + ".csv"), "w")
     out.write('Combination,Accuracy,Time\n')
 
     out.close()

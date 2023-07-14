@@ -305,7 +305,7 @@ def load_combos():
     scratchDict = {}
     scratchTime = {}
 
-    fileName = os.path.join(base_path, "result", "update_repeat_" + str(0) + ".csv")
+    fileName = os.path.join(base_path, "result", "update_result.csv")
     with open(fileName) as csv_file:
         csv_reader = csv.reader(csv_file)
         next(csv_reader)
