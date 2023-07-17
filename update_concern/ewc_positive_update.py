@@ -1,18 +1,16 @@
 import os
 import numpy as np
 from keras.models import load_model
-from keras.utils import to_categorical
-
-from update_concern.ewc_trainer import evaluate
 from update_concern.ewc_util import get_combos, update2, evaluate_composition2, load_combos
 from util.data_util import load_data_by_name, \
     sample_and_combine_train_positive, sample_and_combine_test_positive, sample, unarize
 
 disableScratchTrain = False
-is_load_combo = False
+is_load_combo = True
 mode = 'update'
-total_combination = 19
+total_combination = 100
 total_repeat = 1
+model_suffix = ''
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -24,11 +22,19 @@ for _d in datasets:
 result = {}
 scratchDict = {}
 scratch_time = {}
+modular_time = {}
+modular_dict = {}
 
 if not is_load_combo:
     combos = get_combos(data, datasets, total_combination, _seed=11)
 else:
-    combos, scratchDict, scratch_time = load_combos()
+    combos, scratchDict, scratch_time, modular_dict, modular_time = load_combos()
+
+# need to delete following two
+scratchDict = {}
+scratch_time = {}
+# modular_time = {}
+# modular_dict = {}
 
 comboList = []
 for _cmb in combos.keys():
@@ -52,50 +58,53 @@ for rpi in range(total_repeat):
         tmp_update_time = []
 
         for (_d, _c) in comboList[_cmb]:
-            # if _c != 3:
-            #     continue
             print(_d, _c)
-            module = load_model(os.path.join(base_path, 'modules', 'model_' + _d,
+            module = load_model(os.path.join(base_path, 'modules', 'model_' + _d + model_suffix,
                                              'module' + str(_c) + '.h5'))
             positiveModule = _c
             negativeModule = 0
             if _c == 0:
                 negativeModule = 1
 
-            nx, ny = sample_and_combine_train_positive(data, (_d, _c), comboList[_cmb],
-                                                       negativeModule, positiveModule, num_sample=100)
-            val_data = sample_and_combine_test_positive(data, (_d, _c), comboList[_cmb],
-                                                        negativeModule,
-                                                        positiveModule, num_sample=1000)
+            if len(modular_dict) == 0:
+                nx, ny = sample_and_combine_train_positive(data, (_d, _c), comboList[_cmb],
+                                                           negativeModule, positiveModule, num_sample=100)
+                val_data = sample_and_combine_test_positive(data, (_d, _c), comboList[_cmb],
+                                                            negativeModule,
+                                                            positiveModule, num_sample=1000)
 
-            # old_train_x, old_train_y = sample((data[_d][0], data[_d][1]),
-            #                                   balance=True, num_sample=500, sample_only_classes=[_c])
-            tmp_update_time.append(
-                update2(module, data[_d][0], data[_d][1], nx, ny,
-                        positiveModule, _d, val_data=val_data))
+                # old_train_x, old_train_y = sample((data[_d][0], data[_d][1]),
+                #                                   balance=True, num_sample=500, sample_only_classes=[_c])
+                tmp_update_time.append(
+                    update2(module, data[_d][0], data[_d][1], nx, ny,
+                            positiveModule, _d, val_data=val_data))
 
-            # _, _, jx, jy = unarize(data[_d][0], data[_d][1], data[_d][2], data[_d][3], _c, _c)
-            # jy = to_categorical(jy, data[_d][4])
-            # currentAccuracy = evaluate(module, (jx, jy))
-            # print('After accuracy (just positive): ' + str(currentAccuracy))
-            #
-            # val_data = sample_and_combine_test_positive(data, (_d, _c), comboList[_cmb],
-            #                                             negativeModule,
-            #                                             positiveModule, num_sample=1000, justNegative=True)
-            # currentAccuracy = evaluate(module, val_data)
-            # print('After accuracy (just negative): ' + str(currentAccuracy))
+                # _, _, jx, jy = unarize(data[_d][0], data[_d][1], data[_d][2], data[_d][3], _c, _c)
+                # jy = to_categorical(jy, data[_d][4])
+                # currentAccuracy = evaluate(module, (jx, jy))
+                # print('After accuracy (just positive): ' + str(currentAccuracy))
+                #
+                # val_data = sample_and_combine_test_positive(data, (_d, _c), comboList[_cmb],
+                #                                             negativeModule,
+                #                                             positiveModule, num_sample=1000, justNegative=True)
+                # currentAccuracy = evaluate(module, val_data)
+                # print('After accuracy (just negative): ' + str(currentAccuracy))
 
             if _d not in modules:
                 modules[_d] = {}
 
             modules[_d][_c] = module
 
-        avgModTime = np.asarray(tmp_update_time).mean()
-        # avgModTime = 0
-
         comboKey, modScore, monScore = evaluate_composition2(modules, data, scratchDict,
-                                                             scratch_time, disableScratchTrain,
-                                                             mode="positive max")
+                                                             scratch_time, modular_dict, disableScratchTrain,
+                                                             mode="positive max",
+                                                             model_suffix=model_suffix)
+
+        if len(modular_dict) == 0:
+            avgModTime = np.asarray(tmp_update_time).mean()
+        else:
+            avgModTime = modular_time[comboKey]
+
         # _, _, _ = evaluate_composition2(modules, data, scratchDict,
         #                                 scratch_time, disableScratchTrain,
         #                                 mode="negative min")

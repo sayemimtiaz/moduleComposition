@@ -16,7 +16,7 @@ from util.data_util import get_mnist_data, get_fmnist_data, loadTensorFlowDatase
 #     ssl._create_default_https_context = _create_unverified_https_context
 #model_scratch
 root = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-model_name = os.path.join(root, 'h5', 'model_scratch.h5')
+model_name = os.path.join(root, 'h5', 'model_emnist4.h5')
 
 if 'fmnist' in model_name:
     x_train, y_train, x_test, y_test, nb_classes = get_fmnist_data(hot=True)
@@ -35,9 +35,12 @@ model.add(Flatten(input_shape=x_train.shape[1:]))
 
 model.add(Dense(100, activation='relu'))
 model.add(Dropout(0.2))
-# model.add(Dense(100, activation='relu'))
-# model.add(Dense(100, activation='relu'))
-# model.add(Dense(100, activation='relu'))
+model.add(Dense(100, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(100, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(100, activation='relu'))
+model.add(Dropout(0.2))
 model.add(Dense(nb_classes, activation='softmax'))
 
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])

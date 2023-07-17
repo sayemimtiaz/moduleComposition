@@ -159,10 +159,10 @@ def evaluate_composition(dataset1, dataset2, modules1, modules2, data1, data2, u
     return result
 
 
-def evaluate_composition2(modules, data, scratchDict, scratch_time,
-                          disableScratchTrain=False, mode='update'):
+def evaluate_composition2(modules, data, scratchDict, scratch_time, modular_dict,
+                          disableScratchTrain=False, mode='update', model_suffix=''):
     Constants.disableUnrollMode()
-    scratch_model_path = os.path.join(base_path, 'h5', 'model_scratch.h5')
+    scratch_model_path = os.path.join(base_path, 'h5', 'model_scratch' + model_suffix + '.h5')
 
     xT, yT, xt, yt, combo_str, labels, num_classes = combine_for_reuse(modules, data)
 
@@ -179,75 +179,79 @@ def evaluate_composition2(modules, data, scratchDict, scratch_time,
             scratchDict[combo_str] = monScore
             scratch_time[combo_str] = elpased
 
-    preds = {}
-    for _d in modules:
-        preds[_d] = {}
-        for _c in modules[_d]:
-            preds[_d][_c] = modules[_d][_c].predict(xt, verbose=0)
-
-    predLabels = []
-    for i in range(0, len(yt)):
-        ks = None
-        maxp = None
-        minp = None
-        winModule = []
-        allNegs = []
+    if combo_str not in modular_dict:
+        preds = {}
         for _d in modules:
+            preds[_d] = {}
             for _c in modules[_d]:
-                if _c == 0:
-                    nc = 1
-                else:
-                    nc = 0
-                if mode == 'positive max':
-                    if maxp is None or maxp < preds[_d][_c][i][_c]:
-                        maxp = preds[_d][_c][i][_c]
-                        ks = (_d, _c)
-                elif mode == 'negative min':
-                    if minp is None or minp > preds[_d][_c][i][nc]:
-                        minp = preds[_d][_c][i][nc]
-                        ks = (_d, _c)
-                elif 'module win' in mode:
-                    if preds[_d][_c][i][_c] > preds[_d][_c][i][nc]:
-                        winModule.append((_d, _c, nc))
-                    allNegs.append((_d, _c, nc))
-                elif mode == 'margin':
-                    tmr = preds[_d][_c][i][_c] - preds[_d][_c][i][nc]
-                    if maxp is None or maxp < tmr:
-                        maxp = tmr
-                        ks = (_d, _c)
-                elif mode == 'rate':
-                    tmr = preds[_d][_c][i][_c] / preds[_d][_c][i][nc]
-                    if maxp is None or maxp < tmr:
-                        maxp = tmr
-                        ks = (_d, _c)
+                preds[_d][_c] = modules[_d][_c].predict(xt, verbose=0)
 
-        if 'module win' in mode:
-            minp = None
+        predLabels = []
+        for i in range(0, len(yt)):
+            ks = None
             maxp = None
-            tmpMod = winModule
-            if len(tmpMod) == 0:
-                tmpMod = allNegs
-            if 'negative min' in mode:
-                for (_d, _c, nc) in tmpMod:
-                    if minp is None or preds[_d][_c][i][nc] < minp:
-                        minp = preds[_d][_c][i][nc]
-                        ks = (_d, _c)
-            elif 'positive max' in mode:
-                for (_d, _c, nc) in tmpMod:
-                    if maxp is None or preds[_d][_c][i][_c] > maxp:
-                        maxp = preds[_d][_c][i][_c]
-                        ks = (_d, _c)
-            elif 'rate' in mode:
-                for (_d, _c, nc) in tmpMod:
-                    tmr = preds[_d][_c][i][_c] / preds[_d][_c][i][nc]
-                    if maxp is None or tmr > maxp:
-                        maxp = tmr
-                        ks = (_d, _c)
-        predLabels.append(labels[ks[0]][ks[1]])
+            minp = None
+            winModule = []
+            allNegs = []
+            for _d in modules:
+                for _c in modules[_d]:
+                    if _c == 0:
+                        nc = 1
+                    else:
+                        nc = 0
+                    if mode == 'positive max':
+                        if maxp is None or maxp < preds[_d][_c][i][_c]:
+                            maxp = preds[_d][_c][i][_c]
+                            ks = (_d, _c)
+                    elif mode == 'negative min':
+                        if minp is None or minp > preds[_d][_c][i][nc]:
+                            minp = preds[_d][_c][i][nc]
+                            ks = (_d, _c)
+                    elif 'module win' in mode:
+                        if preds[_d][_c][i][_c] > preds[_d][_c][i][nc]:
+                            winModule.append((_d, _c, nc))
+                        allNegs.append((_d, _c, nc))
+                    elif mode == 'margin':
+                        tmr = preds[_d][_c][i][_c] - preds[_d][_c][i][nc]
+                        if maxp is None or maxp < tmr:
+                            maxp = tmr
+                            ks = (_d, _c)
+                    elif mode == 'rate':
+                        tmr = preds[_d][_c][i][_c] / preds[_d][_c][i][nc]
+                        if maxp is None or maxp < tmr:
+                            maxp = tmr
+                            ks = (_d, _c)
 
-    predLabels = np.asarray(predLabels)
-    predLabels = predLabels.flatten()
-    modScore = accuracy_score(predLabels, np.asarray(yt).flatten())
+            if 'module win' in mode:
+                minp = None
+                maxp = None
+                tmpMod = winModule
+                if len(tmpMod) == 0:
+                    tmpMod = allNegs
+                if 'negative min' in mode:
+                    for (_d, _c, nc) in tmpMod:
+                        if minp is None or preds[_d][_c][i][nc] < minp:
+                            minp = preds[_d][_c][i][nc]
+                            ks = (_d, _c)
+                elif 'positive max' in mode:
+                    for (_d, _c, nc) in tmpMod:
+                        if maxp is None or preds[_d][_c][i][_c] > maxp:
+                            maxp = preds[_d][_c][i][_c]
+                            ks = (_d, _c)
+                elif 'rate' in mode:
+                    for (_d, _c, nc) in tmpMod:
+                        tmr = preds[_d][_c][i][_c] / preds[_d][_c][i][nc]
+                        if maxp is None or tmr > maxp:
+                            maxp = tmr
+                            ks = (_d, _c)
+            predLabels.append(labels[ks[0]][ks[1]])
+
+        predLabels = np.asarray(predLabels)
+        predLabels = predLabels.flatten()
+        modScore = accuracy_score(predLabels, np.asarray(yt).flatten())
+    else:
+        modScore = modular_dict[combo_str]
+
     print('Evaluating ' + combo_str)
     print("Modularized Accuracy (" + mode + "): " + str(modScore))
     print("Trained Accuracy: " + str(scratchDict[combo_str]))
@@ -304,8 +308,10 @@ def load_combos():
     combos = {}
     scratchDict = {}
     scratchTime = {}
+    modular_time = {}
+    modular_dict = {}
 
-    fileName = os.path.join(base_path, "result", "update_result.csv")
+    fileName = os.path.join(base_path, "result", "update_model1.csv")
     with open(fileName) as csv_file:
         csv_reader = csv.reader(csv_file)
         next(csv_reader)
@@ -315,6 +321,9 @@ def load_combos():
             tcmb = row[0].strip()
             scratchDict[tcmb] = float(row[2])
             scratchTime[tcmb] = float(row[5])
+
+            modular_dict[tcmb] = float(row[1])
+            modular_time[tcmb] = float(row[4])
 
             tcmb = tcmb.replace('(', '')
             tcmb = tcmb.split(')')
@@ -331,4 +340,4 @@ def load_combos():
                 combos[_i][_d] = rt
             _i += 1
 
-    return combos, scratchDict, scratchTime
+    return combos, scratchDict, scratchTime, modular_dict, modular_time

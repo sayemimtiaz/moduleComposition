@@ -31,9 +31,11 @@ def fisher_matrix(model, dataset, samples):
         # Collect gradients.
         with tf.GradientTape() as tape:
             output = model(data)
-            log_likelihood = tf.math.log(output+1e-9)
+            log_likelihood = tf.math.log(output + 1e-9)
 
-        gradients = tape.gradient(log_likelihood, weights)
+        gradients = tape.gradient(log_likelihood,
+                                  weights)  # it computes for a small change in weight, how does output changes?
+        # Larger the gradient, higher the impact on output, making it kore important
 
         # If the model has converged, we can assume that the current weights
         # are the mean, and each gradient we see is a deviation. The variance is
