@@ -13,6 +13,7 @@ mode = 'dynamic'
 total_combination = 100
 total_repeat = 1
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
+model_suffix = '4'
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
@@ -22,7 +23,7 @@ for _d in datasets:
 
 result = {}
 
-combos, _, _ = load_combos()
+combos, _, _, _, _ = load_combos(name='update_model4')
 
 comboList = []
 for _cmb in combos.keys():
@@ -44,7 +45,7 @@ for rpi in range(total_repeat):
         modules = {}
 
         for (_d, _c) in comboList[_cmb]:
-            module = load_model(os.path.join(base_path, 'modules', 'model_' + _d,
+            module = load_model(os.path.join(base_path, 'modules', 'model_' + _d + model_suffix,
                                              'module' + str(_c) + '.h5'))
             if _d not in modules:
                 modules[_d] = {}

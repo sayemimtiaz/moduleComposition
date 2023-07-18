@@ -67,17 +67,24 @@ def update(module, old_train_x, old_train_y, new_train_x, new_train_y, positiveM
         #         print('Adjusted')
 
 
-def update2(module, old_train_x, old_train_y, new_train_x, new_train_y, positiveModule, old_dataset, val_data=None):
+def update2(module, old_train_x, old_train_y, new_train_x, new_train_y, positiveModule, old_dataset, val_data=None,
+            algorithm='EWC'):
     with open(os.path.join(base_path, 'modules', 'model_' + old_dataset,
                            'mask' + str(positiveModule) + '.pickle'), 'rb') as handle:
-        mask = pickle.load(handle)
-        mask = None
+        use_incdet = False
         use_fim = False
         use_ewc = True
+        if algorithm == 'EWC':
+            mask = None
+        else:
+            mask = pickle.load(handle)
+            use_incdet = True
+            use_ewc = False
+
         return train(module, (new_train_x, new_train_y), (old_train_x, old_train_y),
                      use_fim=use_fim, use_ewc=use_ewc, ewc_samples=500, prior_mask=mask,
                      fim_samples=500, fim_threshold=1e-3, val_data=val_data,
-                     use_incdet=False, incdet_thres=1e-6, ewc_lambda=1.0)
+                     use_incdet=use_incdet, incdet_thres=1e-6, ewc_lambda=1.0)
 
 
 def evaluate_composition(dataset1, dataset2, modules1, modules2, data1, data2, updated=False):
@@ -159,8 +166,7 @@ def evaluate_composition(dataset1, dataset2, modules1, modules2, data1, data2, u
     return result
 
 
-def evaluate_composition2(modules, data, scratchDict, scratch_time, modular_dict,
-                          disableScratchTrain=False, mode='update', model_suffix=''):
+def evaluate_composition2(modules, data, scratchDict, scratch_time, modular_dict, mode='update', model_suffix=''):
     Constants.disableUnrollMode()
     scratch_model_path = os.path.join(base_path, 'h5', 'model_scratch' + model_suffix + '.h5')
 
@@ -169,15 +175,12 @@ def evaluate_composition2(modules, data, scratchDict, scratch_time, modular_dict
     print('Evaluating ' + combo_str)
 
     if combo_str not in scratchDict:
-        if disableScratchTrain:
-            scratchDict[combo_str] = 0
-        else:
-            yT = to_categorical(yT)
-            monScore, elpased = trainModelAndPredictInBinary(scratch_model_path,
-                                                             xT, yT, xt, yt,
-                                                             nb_classes=num_classes)
-            scratchDict[combo_str] = monScore
-            scratch_time[combo_str] = elpased
+        yT = to_categorical(yT)
+        monScore, elpased = trainModelAndPredictInBinary(scratch_model_path,
+                                                         xT, yT, xt, yt,
+                                                         nb_classes=num_classes)
+        scratchDict[combo_str] = monScore
+        scratch_time[combo_str] = elpased
 
     if combo_str not in modular_dict:
         preds = {}
@@ -304,14 +307,14 @@ def get_combos(data, datasets, total_combination=10, _seed=19):
     return combos
 
 
-def load_combos():
+def load_combos(name='update_model4'):
     combos = {}
     scratchDict = {}
     scratchTime = {}
     modular_time = {}
     modular_dict = {}
 
-    fileName = os.path.join(base_path, "result", "update_model1.csv")
+    fileName = os.path.join(base_path, "result", name+".csv")
     with open(fileName) as csv_file:
         csv_reader = csv.reader(csv_file)
         next(csv_reader)

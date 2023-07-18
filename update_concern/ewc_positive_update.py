@@ -5,12 +5,12 @@ from update_concern.ewc_util import get_combos, update2, evaluate_composition2, 
 from util.data_util import load_data_by_name, \
     sample_and_combine_train_positive, sample_and_combine_test_positive, sample, unarize
 
-disableScratchTrain = False
+UPDATE_ALGORITHM = 'EWC'  # EWC or MASK
 is_load_combo = True
-mode = 'update'
+mode = 'static'  # static or update
 total_combination = 100
 total_repeat = 1
-model_suffix = ''
+model_suffix = '4'
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -31,10 +31,10 @@ else:
     combos, scratchDict, scratch_time, modular_dict, modular_time = load_combos()
 
 # need to delete following two
-scratchDict = {}
-scratch_time = {}
-# modular_time = {}
-# modular_dict = {}
+# scratchDict = {}
+# scratch_time = {}
+modular_time = {}
+modular_dict = {}
 
 comboList = []
 for _cmb in combos.keys():
@@ -66,7 +66,7 @@ for rpi in range(total_repeat):
             if _c == 0:
                 negativeModule = 1
 
-            if len(modular_dict) == 0:
+            if mode == 'update' and len(modular_dict) == 0:
                 nx, ny = sample_and_combine_train_positive(data, (_d, _c), comboList[_cmb],
                                                            negativeModule, positiveModule, num_sample=100)
                 val_data = sample_and_combine_test_positive(data, (_d, _c), comboList[_cmb],
@@ -77,7 +77,7 @@ for rpi in range(total_repeat):
                 #                                   balance=True, num_sample=500, sample_only_classes=[_c])
                 tmp_update_time.append(
                     update2(module, data[_d][0], data[_d][1], nx, ny,
-                            positiveModule, _d, val_data=val_data))
+                            positiveModule, _d, val_data=val_data, algorithm=UPDATE_ALGORITHM))
 
                 # _, _, jx, jy = unarize(data[_d][0], data[_d][1], data[_d][2], data[_d][3], _c, _c)
                 # jy = to_categorical(jy, data[_d][4])
@@ -96,14 +96,17 @@ for rpi in range(total_repeat):
             modules[_d][_c] = module
 
         comboKey, modScore, monScore = evaluate_composition2(modules, data, scratchDict,
-                                                             scratch_time, modular_dict, disableScratchTrain,
+                                                             scratch_time, modular_dict,
                                                              mode="positive max",
                                                              model_suffix=model_suffix)
 
-        if len(modular_dict) == 0:
-            avgModTime = np.asarray(tmp_update_time).mean()
+        if mode == 'update':
+            if len(modular_dict) == 0:
+                avgModTime = np.asarray(tmp_update_time).mean()
+            else:
+                avgModTime = modular_time[comboKey]
         else:
-            avgModTime = modular_time[comboKey]
+            avgModTime = 'N/A'
 
         # _, _, _ = evaluate_composition2(modules, data, scratchDict,
         #                                 scratch_time, disableScratchTrain,
