@@ -175,7 +175,7 @@ def combine_for_reuse(modules, data):
     xT, yT = shuffle(xT, yT, random_state=0)
     xt, yt = shuffle(xt, yt, random_state=0)
 
-    return xT, yT, xt, yt, combo_str, labels,lblCntr
+    return xT, yT, xt, yt, combo_str, labels, lblCntr
 
 
 def makeScalar(data):
@@ -258,10 +258,50 @@ def sample_and_combine_train_positive(data, targetMod, combo, negativeModule, po
             temp_y.append(negativeModule)
         i += 1
 
-    x[i], _ = sample((data[targetMod[0]][0], data[targetMod[0]][1]), sample_only_classes=[targetMod[1]],
-                     balance=True, num_sample=negSampleCount, seed=seed)
-    for i in range(len(x[i])):
-        temp_y.append(positiveModule)
+    # x[i], _ = sample((data[targetMod[0]][0], data[targetMod[0]][1]), sample_only_classes=[targetMod[1]],
+    #                  balance=True, num_sample=negSampleCount, seed=seed)
+    # x[i], _ = sample((data[targetMod[0]][0], data[targetMod[0]][1]), sample_only_classes=[targetMod[1]],
+    #                  balance=True, num_sample=num_sample, seed=seed)
+    # for i in range(len(x[i])):
+    #     temp_y.append(positiveModule)
+    # for i in range(num_sample):
+    #     temp_y.append(positiveModule)
+
+    mx = x[0]
+    for i in range(1, len(x)):
+        mx = np.concatenate((mx, x[i]))
+
+    my = to_categorical(temp_y, data[targetMod[0]][4])
+
+    mx, my = shuffle(mx, my, random_state=0)
+
+    return mx, my
+
+
+def sample_and_combine_train_positive_for_ablation(data, targetMod, combo, negativeModule, positiveModule,
+                                                   num_sample=500, seed=19,
+                                                   includePositive=False, positiveRatio=1):
+    x = {}
+    i = 0
+    temp_y = []
+    negSampleCount = 0
+    for (d, c) in combo:
+        if (d, c) == targetMod:
+            continue
+        x[i], _ = sample((data[d][0], data[d][1]), sample_only_classes=[c],
+                         balance=True, num_sample=num_sample, seed=seed)
+        negSampleCount += len(x[i])
+        for j in range(len(x[i])):
+            temp_y.append(negativeModule)
+        i += 1
+
+    if includePositive:
+        posSampleCount = math.ceil(negSampleCount * positiveRatio)
+        x[i], _ = sample((data[targetMod[0]][0], data[targetMod[0]][1]), sample_only_classes=[targetMod[1]],
+                         balance=True, num_sample=posSampleCount, seed=seed)
+
+        for i in range(len(x[i])):
+            temp_y.append(positiveModule)
 
     mx = x[0]
     for i in range(1, len(x)):

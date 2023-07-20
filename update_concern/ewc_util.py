@@ -87,6 +87,16 @@ def update2(module, old_train_x, old_train_y, new_train_x, new_train_y, positive
                      use_incdet=use_incdet, incdet_thres=1e-6, ewc_lambda=1.0)
 
 
+def update_for_ablation(module, old_train_x, old_train_y, new_train_x, new_train_y,
+                        val_data=None, use_ewc=False, use_fim=False,use_incdet=False):
+
+    return train(module, (new_train_x, new_train_y), (old_train_x, old_train_y),
+                 use_fim=use_fim, use_ewc=use_ewc, ewc_samples=500, prior_mask=None,
+                 fim_samples=500, fim_threshold=1e-3, val_data=val_data,
+                 use_incdet=use_incdet, incdet_thres=1e-6, ewc_lambda=1.0)
+
+
+
 def evaluate_composition(dataset1, dataset2, modules1, modules2, data1, data2, updated=False):
     Constants.disableUnrollMode()
 
@@ -307,14 +317,14 @@ def get_combos(data, datasets, total_combination=10, _seed=19):
     return combos
 
 
-def load_combos(name='update_model4'):
+def load_combos(name='update_model1'):
     combos = {}
     scratchDict = {}
     scratchTime = {}
     modular_time = {}
     modular_dict = {}
 
-    fileName = os.path.join(base_path, "result", name+".csv")
+    fileName = os.path.join(base_path, "result", name + ".csv")
     with open(fileName) as csv_file:
         csv_reader = csv.reader(csv_file)
         next(csv_reader)

@@ -1,12 +1,15 @@
 import os
 import numpy as np
 from keras.models import load_model
-from update_concern.ewc_util import get_combos, update2, evaluate_composition2, load_combos
+from update_concern.ewc_util import get_combos, update2, evaluate_composition2, load_combos, update_for_ablation
 from util.data_util import load_data_by_name, \
-    sample_and_combine_train_positive, sample_and_combine_test_positive, sample, unarize
+    sample_and_combine_train_positive, sample_and_combine_test_positive, sample, unarize, \
+    sample_and_combine_train_positive_for_ablation
 
+includePositive = False
+positiveRatio = 1
+use_ewc = True
 
-UPDATE_ALGORITHM = 'EWC'  # EWC or MASK
 is_load_combo = True
 mode = 'update'  # static or update
 total_combination = 100
@@ -68,28 +71,16 @@ for rpi in range(total_repeat):
                 negativeModule = 1
 
             if mode == 'update' and len(modular_dict) == 0:
-                nx, ny = sample_and_combine_train_positive(data, (_d, _c), comboList[_cmb],
-                                                           negativeModule, positiveModule, num_sample=100)
+                nx, ny = sample_and_combine_train_positive_for_ablation(data, (_d, _c), comboList[_cmb],
+                                                                        negativeModule, positiveModule, num_sample=100,
+                                                                        includePositive=includePositive,
+                                                                        positiveRatio=positiveRatio)
                 val_data = sample_and_combine_test_positive(data, (_d, _c), comboList[_cmb],
                                                             negativeModule,
                                                             positiveModule, num_sample=1000)
 
-                # old_train_x, old_train_y = sample((data[_d][0], data[_d][1]),
-                #                                   balance=True, num_sample=500, sample_only_classes=[_c])
                 tmp_update_time.append(
-                    update2(module, data[_d][0], data[_d][1], nx, ny,
-                            positiveModule, _d, val_data=val_data, algorithm=UPDATE_ALGORITHM))
-
-                # _, _, jx, jy = unarize(data[_d][0], data[_d][1], data[_d][2], data[_d][3], _c, _c)
-                # jy = to_categorical(jy, data[_d][4])
-                # currentAccuracy = evaluate(module, (jx, jy))
-                # print('After accuracy (just positive): ' + str(currentAccuracy))
-                #
-                # val_data = sample_and_combine_test_positive(data, (_d, _c), comboList[_cmb],
-                #                                             negativeModule,
-                #                                             positiveModule, num_sample=1000, justNegative=True)
-                # currentAccuracy = evaluate(module, val_data)
-                # print('After accuracy (just negative): ' + str(currentAccuracy))
+                    update_for_ablation(module, data[_d][0], data[_d][1], nx, ny, val_data=val_data, use_ewc=use_ewc))
 
             if _d not in modules:
                 modules[_d] = {}
@@ -109,24 +100,6 @@ for rpi in range(total_repeat):
         else:
             avgModTime = 'N/A'
 
-        # _, _, _ = evaluate_composition2(modules, data, scratchDict,
-        #                                 scratch_time, disableScratchTrain,
-        #                                 mode="negative min")
-        # _, _, _ = evaluate_composition2(modules, data, scratchDict,
-        #                                 scratch_time, disableScratchTrain,
-        #                                 mode="margin")
-        # _, _, _ = evaluate_composition2(modules, data, scratchDict,
-        #                                 scratch_time, disableScratchTrain,
-        #                                 mode="rate")
-        # _, _, _ = evaluate_composition2(modules, data, scratchDict,
-        #                                 scratch_time, disableScratchTrain,
-        #                                 mode="module win positive max")
-        # _, _, _ = evaluate_composition2(modules, data, scratchDict,
-        #                                 scratch_time, disableScratchTrain,
-        #                                 mode="module win negative min")
-        # _, _, _ = evaluate_composition2(modules, data, scratchDict,
-        #                                 scratch_time, disableScratchTrain,
-        #                                 mode="module win rate")
         if comboKey not in result:
             result[comboKey] = 0
         result[comboKey] += modScore
