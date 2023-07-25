@@ -88,13 +88,12 @@ def update2(module, old_train_x, old_train_y, new_train_x, new_train_y, positive
 
 
 def update_for_ablation(module, old_train_x, old_train_y, new_train_x, new_train_y,
-                        val_data=None, use_ewc=False, use_fim=False,use_incdet=False):
-
+                        val_data=None, use_ewc=False, use_fim=False, use_incdet=False, ewc_lambda=1.0,
+                        incdet_thres=1e-6):
     return train(module, (new_train_x, new_train_y), (old_train_x, old_train_y),
                  use_fim=use_fim, use_ewc=use_ewc, ewc_samples=500, prior_mask=None,
                  fim_samples=500, fim_threshold=1e-3, val_data=val_data,
-                 use_incdet=use_incdet, incdet_thres=1e-6, ewc_lambda=1.0)
-
+                 use_incdet=use_incdet, incdet_thres=incdet_thres, ewc_lambda=ewc_lambda)
 
 
 def evaluate_composition(dataset1, dataset2, modules1, modules2, data1, data2, updated=False):
@@ -176,17 +175,18 @@ def evaluate_composition(dataset1, dataset2, modules1, modules2, data1, data2, u
     return result
 
 
-def evaluate_composition2(modules, data, scratchDict, scratch_time, modular_dict, mode='update', model_suffix=''):
+def evaluate_composition2(modules, data, scratchDict, scratch_time, modular_dict, mode='update', model_suffix='',
+                          num_sample=100):
     Constants.disableUnrollMode()
     scratch_model_path = os.path.join(base_path, 'h5', 'model_scratch' + model_suffix + '.h5')
 
-    xT, yT, xt, yt, combo_str, labels, num_classes = combine_for_reuse(modules, data)
+    xT, yT, xt, yt, combo_str, labels, num_classes = combine_for_reuse(modules, data, num_sample=num_sample)
 
     print('Evaluating ' + combo_str)
 
     if combo_str not in scratchDict:
         yT = to_categorical(yT)
-        monScore, elpased = trainModelAndPredictInBinary(scratch_model_path,
+        monScore, elpased, _ = trainModelAndPredictInBinary(scratch_model_path,
                                                          xT, yT, xt, yt,
                                                          nb_classes=num_classes)
         scratchDict[combo_str] = monScore

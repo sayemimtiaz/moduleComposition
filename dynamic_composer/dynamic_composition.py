@@ -14,6 +14,7 @@ total_combination = 100
 total_repeat = 1
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 model_suffix = '4'
+num_sample = 100
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
@@ -23,7 +24,7 @@ for _d in datasets:
 
 result = {}
 
-combos, _, _, _, _ = load_combos(name='update_model4')
+combos, _, _, _, _ = load_combos(name='update_model1')
 
 comboList = []
 for _cmb in combos.keys():
@@ -52,7 +53,7 @@ for rpi in range(total_repeat):
 
             modules[_d][_c] = module
 
-        xT, yT, xt, yt, comboKey, labels, num_classes = combine_for_reuse(modules, data)
+        xT, yT, xt, yt, comboKey, labels, num_classes = combine_for_reuse(modules, data, num_sample=100)
 
         yT = to_categorical(yT)
         modScore, modularTime = compose_dynamically_and_train(modules, xT, yT, xt, yt, nb_classes=num_classes)

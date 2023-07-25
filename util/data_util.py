@@ -119,12 +119,34 @@ def unarize(x_train_original, y_train_original, x_test_original, y_test_original
     return x_train, y_train, x_test, y_test
 
 
-def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_test_original, classes, labels):
-    # train data change
-    x_train = x_train_original[np.where(np.isin(y_train_original, classes))]
+def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_test_original, classes, labels,
+                       num_sample=-1):
+    x_train = []
     y_train = []
-    for y in y_train_original[np.where(np.isin(y_train_original, classes))]:
-        y_train.append(labels[y])
+
+    # train data change
+    if num_sample == -1:
+        x_train = x_train_original[np.where(np.isin(y_train_original, classes))]
+        y_train = y_train_original[np.where(np.isin(y_train_original, classes))]
+    else:
+        flag = False
+        for c in classes:
+            x_train_temp = x_train_original[np.where(y_train_original == c)]
+            y_train_temp = y_train_original[np.where(y_train_original == c)]
+
+            chosen_index = np.random.choice(range(len(x_train_temp)), min(len(x_train_temp), num_sample), replace=False)
+
+            x_train_temp, y_train_temp = x_train_temp[chosen_index], y_train_temp[chosen_index]
+
+            if not flag:
+                x_train, y_train = x_train_temp, y_train_temp
+                flag = True
+            else:
+                x_train = np.concatenate((x_train, x_train_temp))
+                y_train = np.concatenate((y_train, y_train_temp))
+
+    for y in range(len(y_train)):
+        y_train[y] = labels[y_train[y]]
 
     y_train = np.array(y_train)
 
@@ -142,7 +164,7 @@ def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_te
     return x_train, y_train, x_test, y_test
 
 
-def combine_for_reuse(modules, data):
+def combine_for_reuse(modules, data, num_sample=-1):
     lblCntr = 1
     labels = {}
     flag = False
@@ -162,10 +184,10 @@ def combine_for_reuse(modules, data):
 
         if not flag:
             xT, yT, xt, yt = make_reuse_dataset(data[_d][0], data[_d][1], data[_d][2],
-                                                data[_d][3], classes, tmp_labels)
+                                                data[_d][3], classes, tmp_labels, num_sample=num_sample)
         else:
             xT1, yT1, xt1, yt1 = make_reuse_dataset(data[_d][0], data[_d][1], data[_d][2],
-                                                    data[_d][3], classes, tmp_labels)
+                                                    data[_d][3], classes, tmp_labels, num_sample=num_sample)
             xT = np.concatenate((xT, xT1))
             yT = np.concatenate((yT, yT1))
             xt = np.concatenate((xt, xt1))
@@ -284,6 +306,7 @@ def sample_and_combine_train_positive_for_ablation(data, targetMod, combo, negat
     x = {}
     i = 0
     temp_y = []
+    # a_y =[]
     negSampleCount = 0
     for (d, c) in combo:
         if (d, c) == targetMod:
@@ -293,6 +316,7 @@ def sample_and_combine_train_positive_for_ablation(data, targetMod, combo, negat
         negSampleCount += len(x[i])
         for j in range(len(x[i])):
             temp_y.append(negativeModule)
+            # a_y.append(0)
         i += 1
 
     if includePositive:
@@ -302,6 +326,7 @@ def sample_and_combine_train_positive_for_ablation(data, targetMod, combo, negat
 
         for i in range(len(x[i])):
             temp_y.append(positiveModule)
+            # a_y.append(1)
 
     mx = x[0]
     for i in range(1, len(x)):
@@ -309,6 +334,9 @@ def sample_and_combine_train_positive_for_ablation(data, targetMod, combo, negat
 
     my = to_categorical(temp_y, data[targetMod[0]][4])
 
+    # ay = to_categorical(a_y)
+
+    # mx, my, ay = shuffle(mx, my, ay, random_state=0)
     mx, my = shuffle(mx, my, random_state=0)
 
     return mx, my
@@ -319,6 +347,7 @@ def sample_and_combine_test_positive(data, targetMod, combo, negativeModule, pos
     x = {}
     i = 0
     temp_y = []
+    # a_y = []
     if not justNegative:
         nl = len(combo) - 1
         nl = int(math.ceil(num_sample / (2 * nl)))
@@ -337,8 +366,10 @@ def sample_and_combine_test_positive(data, targetMod, combo, negativeModule, pos
         for j in range(len(x[i])):
             if (d, c) == targetMod:
                 temp_y.append(positiveModule)
+                # a_y.append(1)
             else:
                 temp_y.append(negativeModule)
+                # a_y.append(0)
 
         i += 1
 
@@ -347,6 +378,7 @@ def sample_and_combine_test_positive(data, targetMod, combo, negativeModule, pos
         mx = np.concatenate((mx, x[i]))
 
     my = to_categorical(temp_y, data[targetMod[0]][4])
+    # ay = to_categorical(a_y)
 
     mx, my = shuffle(mx, my, random_state=0)
 

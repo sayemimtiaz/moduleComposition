@@ -74,17 +74,29 @@ def train_epoch(train_data, batch_size,
     dataset = dataset.shuffle(len(train_data[0])).batch(batch_size)
     # print('train_epoch called')
 
-    overall_loss = tf.keras.metrics.Mean()
+    # overall_loss = tf.keras.metrics.Mean()
     for inputs, labels in dataset:
         loss = train_step_fun(inputs, labels)
-        overall_loss.update_state(loss)
+        # overall_loss.update_state(loss)
         # for variable in model.trainable_variables:
         #     if tf.reduce_any(tf.math.is_nan(variable)):
         #         print('Nan weights detected')
         #         break
 
-    return overall_loss.result().numpy()
+    # return overall_loss.result().numpy()
+    return 0
 
+
+def compute_ewc_penalty_terms(model, old_data, ewc_samples=500, ewc_lambda=0.1,learning_rate=1e-3):
+    start = time.time()
+    regularisers = []
+
+    loss_fn = ewc.ewc_loss(ewc_lambda, model, old_data,
+                           ewc_samples)
+    regularisers.append(loss_fn)
+    compile_model(model, learning_rate, extra_losses=regularisers)
+    end = time.time()
+    return end-start
 
 def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, learning_rate=1e-3,
           use_ewc=False, ewc_lambda=1, ewc_samples=100, prior_mask=None,
@@ -107,7 +119,6 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
     :param incdet_threshold: Threshold for IncDet gradient clipping.
     """
     global model, train_step_fun, gradient_mask, incdet_threshold
-    start = time.time()
     incdet_threshold = incdet_thres
 
     model = compile_model(_model, learning_rate)
@@ -118,10 +129,12 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
         incdet_threshold = None
 
     if use_ewc:
+
         loss_fn = ewc.ewc_loss(ewc_lambda, model, old_data,
                                ewc_samples)
         regularisers.append(loss_fn)
         compile_model(model, learning_rate, extra_losses=regularisers)
+
     # If using FIM, determine which weights must be frozen to preserve
     # performance on the current dataset.
     if use_fim:
@@ -165,8 +178,10 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
     train_step_fun = tf.function(train_step)
     # train_step_fun=train_step
 
+    start = time.time()
+
     for epoch in range(epochs):
-        currentLoss = train_epoch(new_data, batch_size,
+        _ = train_epoch(new_data, batch_size,
                                   gradient_mask=gradient_mask,
                                   incdet_threshold=incdet_threshold)
         currentAccuracy = evaluate(model, val_data)
@@ -186,7 +201,7 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
             break
 
         priorAccuracy = currentAccuracy
-        priorLoss = currentLoss
+        # priorLoss = currentLoss
         actualEpoch += 1
 
         # report(model, epoch, valid_sets, batch_size)

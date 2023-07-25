@@ -205,7 +205,7 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
                   optimizer='adam',
                   metrics=['accuracy'])
 
-    es = EarlyStopping(monitor='val_accuracy', mode='max', patience=3)
+    es = EarlyStopping(monitor='val_accuracy', mode='max', patience=3, restore_best_weights=True)
     # es = EarlyStopping(monitor='loss', mode='min', patience=3)
 
     start = time.time()
@@ -217,12 +217,15 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
               callbacks=[es]
               )
     end = time.time()
-    pred = model.predict(X_test[:len(Y_test)])
+    pred = model.predict(X_test[:len(Y_test)], verbose=verbose)
     # from evaluation.accuracy_computer import getMonolithicModelPredictionAnyToOne
     # pred = getMonolithicModelPredictionAnyToOne(model, X_test, Y_test)
     pred = pred.argmax(axis=-1)
-    score = accuracy_score(pred, Y_test[:len(Y_test)])
-    return score, end - start
+    if len(Y_test.shape) > 1:
+        score = accuracy_score(pred, Y_test.argmax(-1))
+    else:
+        score = accuracy_score(pred, Y_test)
+    return score, end - start, model
 
 
 def compose_dynamically_and_train(modules, X_train, Y_train, X_test, Y_test, epochs=100, batch_size=32,
@@ -278,6 +281,65 @@ def compose_dynamically_and_train(modules, X_train, Y_train, X_test, Y_test, epo
 
     # concatted = Concatenate()([s1_x4, s2_x4])
     # concatted = Average()([s1_x4, s2_x4])
+
+    output = Dense(units=nb_classes, activation=activation)(concatted)
+
+    model = Model(inputs=inputLayer, outputs=output)
+
+    model.compile(loss='categorical_crossentropy',
+                  optimizer='adam',
+                  metrics=['accuracy'])
+    es = EarlyStopping(monitor='val_accuracy', mode='max', patience=3)
+
+    start = time.time()
+
+    model.fit(X_train, Y_train,
+              epochs=epochs,
+              batch_size=batch_size,
+              validation_split=0.2,
+              verbose=verbose,
+              callbacks=[es])
+
+    end = time.time()
+
+    pred = model.predict(X_test[:len(Y_test)], verbose=0)
+    # from evaluation.accuracy_computer import getMonolithicModelPredictionAnyToOne
+    # pred = getMonolithicModelPredictionAnyToOne(model, X_test, Y_test)
+    pred = pred.argmax(axis=-1)
+    score = accuracy_score(pred, Y_test[:len(Y_test)])
+    return score, end - start
+
+
+def compose_dynamically_and_train_approach2(modules, X_train, Y_train, X_test, Y_test, epochs=100, batch_size=32,
+                                            verbose=0
+                                            , nb_classes=2, activation='softmax', concatMode='average'):
+    if len(modules) == 0:
+        print('No modules to compose')
+        return
+
+    inputLayer = Input(shape=(28, 28))
+
+    flat = Flatten()(inputLayer)
+
+    frozen_modules = []
+
+    for _d in modules:
+        myLayers = initModularLayers(modules[_d].layers)
+
+        current = flat
+        for layerNo, _layer in enumerate(myLayers):
+            if _layer.last_layer:
+                continue
+            if _layer.type == LayerType.Dense:
+                current = Dense(_layer.num_node, activation=_layer.activation.name.lower(),
+                                weights=modules[_d].layers[layerNo].get_weights(), trainable=False)(current)
+            elif _layer.type == LayerType.Dropout:
+                current = Dropout(modules[_d].layers[layerNo].rate)(current)
+
+        frozen_modules.append(current)
+
+    if concatMode == 'average':
+        concatted = Average()(frozen_modules)
 
     output = Dense(units=nb_classes, activation=activation)(concatted)
 
