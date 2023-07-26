@@ -342,6 +342,46 @@ def sample_and_combine_train_positive_for_ablation(data, targetMod, combo, negat
     return mx, my
 
 
+def sample_and_combine_test_positive_for_ablation(data, targetMod, combo, negativeModule, positiveModule,
+                                                  num_sample=50, seed=19, positiveRatio=1):
+    x = {}
+    i = 0
+    temp_y = []
+    # a_y =[]
+    negSampleCount = 0
+    for (d, c) in combo:
+        if (d, c) == targetMod:
+            continue
+        x[i], _ = sample((data[d][2], data[d][3]), sample_only_classes=[c],
+                         balance=True, num_sample=num_sample, seed=seed)
+        negSampleCount += len(x[i])
+        for j in range(len(x[i])):
+            temp_y.append(negativeModule)
+            # a_y.append(0)
+        i += 1
+
+    posSampleCount = math.ceil(negSampleCount * positiveRatio)
+    x[i], _ = sample((data[targetMod[0]][2], data[targetMod[0]][3]), sample_only_classes=[targetMod[1]],
+                     balance=True, num_sample=posSampleCount, seed=seed)
+
+    for i in range(len(x[i])):
+        temp_y.append(positiveModule)
+        # a_y.append(1)
+
+    mx = x[0]
+    for i in range(1, len(x)):
+        mx = np.concatenate((mx, x[i]))
+
+    my = to_categorical(temp_y, data[targetMod[0]][4])
+
+    # ay = to_categorical(a_y)
+
+    # mx, my, ay = shuffle(mx, my, ay, random_state=0)
+    mx, my = shuffle(mx, my, random_state=0)
+
+    return mx, my
+
+
 def sample_and_combine_test_positive(data, targetMod, combo, negativeModule, positiveModule,
                                      num_sample=500, seed=19, justNegative=False):
     x = {}
