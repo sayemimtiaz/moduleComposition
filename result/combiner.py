@@ -1,7 +1,7 @@
 import os
 import csv
 
-model_suffix = '1'
+model_suffix = '2'
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 out = open(os.path.join(base_path, "result", "combined_model" + model_suffix + ".csv"), "w")

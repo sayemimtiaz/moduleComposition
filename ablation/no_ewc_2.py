@@ -13,9 +13,9 @@ from util.data_util import load_data_by_name, \
 positiveRatioInValid = 1.0  # Try with: 0.0, 0.5, 1.0, 2.0, 4.0
 trainModuleFromScratch = False
 doUntil = 20
-positiveRatioInTrain = 1.0
+positiveRatioInTrain = 0.5
 includePositive = True
-use_ewc = False
+use_ewc = True
 ewc_lambda = 0.1
 use_incdet = False
 incdet_thres = 1e-6
@@ -66,7 +66,7 @@ for _cmb in combos.keys():
 
 for rpi in range(total_repeat):
     if logOutput:
-        out = open(os.path.join(base_path, "result", mode + "_repeat_" + str(rpi) + ".csv"), "w")
+        out = open(os.path.join(base_path, "result", "positive_ratio_in_train_2.csv"), "w")
         out.write(
             'Combination,Modularized Accuracy,Trained Model Accuracy,Accuracy Delta,Update Time,Scratch Time\n')
 
@@ -74,7 +74,7 @@ for rpi in range(total_repeat):
     mod_time = {}
     for _cmb in range(len(comboList)):
         if logOutput:
-            out = open(os.path.join(base_path, "result", mode + "_repeat_" + str(rpi) + ".csv"), "a")
+            out = open(os.path.join(base_path, "result", "positive_ratio_in_train_2.csv"), "a")
 
         modules = {}
         tmp_update_time = []

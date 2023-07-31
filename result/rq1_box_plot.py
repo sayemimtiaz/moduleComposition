@@ -4,9 +4,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+mode = 'time'  # or time
+
 
 def series_values_as_dict(series_object):
     tmp = series_object.to_dict().values()
@@ -14,6 +14,7 @@ def series_values_as_dict(series_object):
 
 
 def add_values(bp, ax, color="blue"):
+    global mode
     """ This actually adds the numbers to the various points of the boxplots"""
     for element in ['medians']:
         # for element in ['whiskers', 'medians', 'caps']:
@@ -26,34 +27,69 @@ def add_values(bp, ax, color="blue"):
                 x_line_center = x_l + (x_r - x_l) / 2
                 y_line_center = y  # Since it's a line and it's horisontal
                 # overlay the value:  on the line, from center to right
-                ax.text(x_line_center, y_line_center,  # Position
-                        '%.1f' % y,  # Value (3f = 3 decimal float)
-                        verticalalignment='center',  # Centered vertically with line
-                        backgroundcolor=fillcolor, color=color,
-                        fontsize=12)
+                if mode == 'accuracy':
+                    s = 0.00
+                    x_line_center = x_l + 0.35
+                    y_line_center = y
+                    fillcolor = 'white'
+                else:
+                    s = 0.0
+                    x_line_center = x_l + 0.2
+                    y_line_center = y
+                    fillcolor = 'white'
+            ax.text(x_line_center - s, y_line_center,  # Position
+                    '%.1f' % y,  # Value (3f = 3 decimal float)
+                    verticalalignment='center',  # Centered vertically with line
+                    backgroundcolor=fillcolor, color=color,
+                    fontsize=12)
 
 
-fig, axs = plt.subplots(1, 2, figsize=(24, 10), squeeze=False, sharey=True)
+if mode == 'accuracy':
+    fig, axs = plt.subplots(1, 2, figsize=(18, 10), squeeze=False, sharey=True)
+else:
+    fig, axs = plt.subplots(1, 2, figsize=(14, 10), squeeze=False, sharey=True)
 
-for i, model_suffix in enumerate(["1", "4"]):
+for i, model_suffix in enumerate(["1", "2"]):
     if model_suffix == '1':
         edgecolor = 'blue'
         fillcolor = 'lightblue'
+
+        edgecolor = 'darkgoldenrod'
+        fillcolor = 'cornsilk'
     else:
         edgecolor = 'peru'
         fillcolor = 'peachpuff'
+
+        edgecolor = 'darkviolet'
+        fillcolor = 'thistle'
+
     fileName = os.path.join(base_path, "result", "combined_model" + model_suffix + ".csv")
 
     df = pd.read_csv(fileName)
 
-    df.rename(columns={
-        'DeepCompose Accuracy': 'DeepCompose',
-        'Static Composition Accuracy': 'Voting',
-        'Module Stacking Accuracy': 'Stacking',
-        'Train-from-scratch Accuracy': 'Scratch'
-    }, inplace=True)
+    if mode == 'accuracy':
+        cols = ['DeepCompose', 'Voting', 'Scratch']
+        df.rename(columns={
+            'DeepCompose Accuracy': 'DeepCompose',
+            'Static Composition Accuracy': 'Voting',
+            # 'Module Stacking Accuracy': 'Stacking',
+            'Train-from-scratch Accuracy': 'Scratch'
+        }, inplace=True)
+    else:
+        cols = ['DeepCompose', 'Scratch']
+        df.rename(columns={
+            'DeepCompose Training Time': 'DeepCompose',
+            # 'Module Stacking Training Time': 'Stacking',
+            'Train-from-scratch Training Time': 'Scratch'
+        }, inplace=True)
+        df['DeepCompose'] = (df['DeepCompose'] / 60)
+        df['Scratch'] = (df['Scratch'] / 60)
 
-    bp, props = df.boxplot(column=['DeepCompose', 'Voting', 'Stacking', 'Scratch'],
+    df=df[cols]
+    print(model_suffix)
+    print(df.describe())
+
+    bp, props = df.boxplot(column=cols,
                            return_type='both',
                            ax=axs[0, i],
                            boxprops=dict(linestyle='-', linewidth=1, color=edgecolor, facecolor=fillcolor),
@@ -61,28 +97,40 @@ for i, model_suffix in enumerate(["1", "4"]):
                            medianprops=dict(linestyle='-', linewidth=1, color=edgecolor),
                            whiskerprops=dict(linestyle='-', linewidth=1, color=edgecolor),
                            capprops=dict(linestyle='-', linewidth=1, color=edgecolor),
-                           showfliers=False, grid=True, rot=0, vert=True, meanline=True,
-                           patch_artist=True
+                           meanprops=dict(color='orange', marker='D'),
+                           showfliers=False, grid=True, rot=0, vert=True, meanline=False,
+                           patch_artist=True,
+                           showmeans=False
                            )
     add_values(props, axs[0, i], color=edgecolor)
 
     # Remove top and right spines
     axs[0, i].spines['top'].set_visible(False)
     axs[0, i].spines['right'].set_visible(False)
-    if model_suffix=='4':
+    if model_suffix == '4':
         axs[0, i].spines['left'].set_visible(False)
 
     axs[0, i].tick_params(labelsize=16)
 
-    axs[0, i].set_title(f'Model '+model_suffix, fontweight='bold', fontsize=18, y=1.05)
-
+    tms=model_suffix
+    if model_suffix=='4':
+        tms='2'
+    axs[0, i].set_title(f'Model ' + tms, fontweight='bold', fontsize=18, y=1.05)
 
     # axs[0, i].set_xlabel('Reuse mode', fontweight='bold', fontsize=18, labelpad=15)
     # axs[0, i].set_ylabel('Accuracy', fontweight='bold', fontsize=18, labelpad=15)
 
 # Set xlabel and ylabel for the entire figure
 fig.text(0.5, 0.02, 'Reuse mode', fontweight='bold', fontsize=18, ha='center')
-fig.text(0.08, 0.5, 'Accuracy', fontweight='bold', fontsize=18, va='center', rotation='vertical')
+if mode == 'accuracy':
+    yl = 'Accuracy'
+    ylx = 0.08
+    yly = 0.5
+else:
+    yl = 'Time to converge (in min)'
+    ylx = 0.04
+    yly = 0.5
+fig.text(ylx, yly, yl, fontweight='bold', fontsize=18, va='center', rotation='vertical')
 
-plt.savefig('figure/boxplotModel' + '.pdf')
+plt.savefig('figure/boxplotModel' + mode + '.pdf')
 plt.show()
