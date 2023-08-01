@@ -66,7 +66,7 @@ for _cmb in combos.keys():
 
 for rpi in range(total_repeat):
     if logOutput:
-        out = open(os.path.join(base_path, "result", "positive_ratio_in_train_2.csv"), "w")
+        out = open(os.path.join(base_path, "result", "positive_ratio_in_train_0.5.csv"), "w")
         out.write(
             'Combination,Modularized Accuracy,Trained Model Accuracy,Accuracy Delta,Update Time,Scratch Time\n')
 
@@ -74,7 +74,7 @@ for rpi in range(total_repeat):
     mod_time = {}
     for _cmb in range(len(comboList)):
         if logOutput:
-            out = open(os.path.join(base_path, "result", "positive_ratio_in_train_2.csv"), "a")
+            out = open(os.path.join(base_path, "result", "positive_ratio_in_train_0.5.csv"), "a")
 
         modules = {}
         tmp_update_time = []

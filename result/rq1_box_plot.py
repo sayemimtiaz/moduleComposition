@@ -45,90 +45,88 @@ def add_values(bp, ax, color="blue"):
 
 
 if mode == 'accuracy':
-    fig, axs = plt.subplots(1, 2, figsize=(18, 10), squeeze=False, sharey=True)
+    fig, axs = plt.subplots(1, 1, figsize=(10, 10), squeeze=False, sharey=True)
 else:
-    fig, axs = plt.subplots(1, 2, figsize=(14, 10), squeeze=False, sharey=True)
+    fig, axs = plt.subplots(1, 1, figsize=(9, 10), squeeze=False, sharey=True)
 
-for i, model_suffix in enumerate(["1", "2"]):
-    if model_suffix == '1':
-        edgecolor = 'blue'
-        fillcolor = 'lightblue'
+fileName = os.path.join(base_path, "result", "combined_model1" + ".csv")
 
-        edgecolor = 'darkgoldenrod'
-        fillcolor = 'cornsilk'
-    else:
-        edgecolor = 'peru'
-        fillcolor = 'peachpuff'
+df = pd.read_csv(fileName)
 
-        edgecolor = 'darkviolet'
-        fillcolor = 'thistle'
+fileName = os.path.join(base_path, "result", "combined_model2" + ".csv")
 
-    fileName = os.path.join(base_path, "result", "combined_model" + model_suffix + ".csv")
+df1 = pd.read_csv(fileName)
+df = df.append(df1)
 
-    df = pd.read_csv(fileName)
+if mode == 'accuracy':
+    edgecolor = 'darkgoldenrod'
+    fillcolor = 'cornsilk'
+else:
+    edgecolor = 'darkviolet'
+    fillcolor = 'thistle'
 
-    if mode == 'accuracy':
-        cols = ['DeepCompose', 'Voting', 'Scratch']
-        df.rename(columns={
-            'DeepCompose Accuracy': 'DeepCompose',
-            'Static Composition Accuracy': 'Voting',
-            # 'Module Stacking Accuracy': 'Stacking',
-            'Train-from-scratch Accuracy': 'Scratch'
-        }, inplace=True)
-    else:
-        cols = ['DeepCompose', 'Scratch']
-        df.rename(columns={
-            'DeepCompose Training Time': 'DeepCompose',
-            # 'Module Stacking Training Time': 'Stacking',
-            'Train-from-scratch Training Time': 'Scratch'
-        }, inplace=True)
-        df['DeepCompose'] = (df['DeepCompose'] / 60)
-        df['Scratch'] = (df['Scratch'] / 60)
 
-    df=df[cols]
-    print(model_suffix)
-    print(df.describe())
+if mode == 'accuracy':
+    cols = ['DeepCompose', 'Voting', 'Scratch']
+    df.rename(columns={
+        'DeepCompose Accuracy': 'DeepCompose',
+        'Static Composition Accuracy': 'Voting',
+        # 'Module Stacking Accuracy': 'Stacking',
+        'Train-from-scratch Accuracy': 'Scratch'
+    }, inplace=True)
+else:
+    cols = ['DeepCompose', 'Scratch']
+    df.rename(columns={
+        'DeepCompose Training Time': 'DeepCompose',
+        # 'Module Stacking Training Time': 'Stacking',
+        'Train-from-scratch Training Time': 'Scratch'
+    }, inplace=True)
+    df['DeepCompose'] = (df['DeepCompose'] / 60)
+    df['Scratch'] = (df['Scratch'] / 60)
 
-    bp, props = df.boxplot(column=cols,
-                           return_type='both',
-                           ax=axs[0, i],
-                           boxprops=dict(linestyle='-', linewidth=1, color=edgecolor, facecolor=fillcolor),
-                           flierprops=dict(linestyle='-', linewidth=1, color=edgecolor),
-                           medianprops=dict(linestyle='-', linewidth=1, color=edgecolor),
-                           whiskerprops=dict(linestyle='-', linewidth=1, color=edgecolor),
-                           capprops=dict(linestyle='-', linewidth=1, color=edgecolor),
-                           meanprops=dict(color='orange', marker='D'),
-                           showfliers=False, grid=True, rot=0, vert=True, meanline=False,
-                           patch_artist=True,
-                           showmeans=False
-                           )
-    add_values(props, axs[0, i], color=edgecolor)
+df = df[cols]
+print(df.describe())
 
-    # Remove top and right spines
-    axs[0, i].spines['top'].set_visible(False)
-    axs[0, i].spines['right'].set_visible(False)
-    if model_suffix == '4':
-        axs[0, i].spines['left'].set_visible(False)
+bp, props = df.boxplot(column=cols,
+                       return_type='both',
+                       ax=axs[0, 0],
+                       boxprops=dict(linestyle='-', linewidth=1, color=edgecolor, facecolor=fillcolor),
+                       flierprops=dict(linestyle='-', linewidth=1, color=edgecolor),
+                       medianprops=dict(linestyle='-', linewidth=1, color=edgecolor),
+                       whiskerprops=dict(linestyle='-', linewidth=1, color=edgecolor),
+                       capprops=dict(linestyle='-', linewidth=1, color=edgecolor),
+                       meanprops=dict(color='orange', marker='D'),
+                       showfliers=False, grid=True, rot=0, vert=True, meanline=False,
+                       patch_artist=True,
+                       showmeans=False
+                       )
+add_values(props, axs[0, 0], color=edgecolor)
 
-    axs[0, i].tick_params(labelsize=16)
+# Remove top and right spines
+axs[0, 0].spines['top'].set_visible(False)
+axs[0, 0].spines['right'].set_visible(False)
+# if model_suffix == '4':
+#     axs[0, i].spines['left'].set_visible(False)
 
-    tms=model_suffix
-    if model_suffix=='4':
-        tms='2'
-    axs[0, i].set_title(f'Model ' + tms, fontweight='bold', fontsize=18, y=1.05)
+axs[0, 0].tick_params(labelsize=16)
 
-    # axs[0, i].set_xlabel('Reuse mode', fontweight='bold', fontsize=18, labelpad=15)
-    # axs[0, i].set_ylabel('Accuracy', fontweight='bold', fontsize=18, labelpad=15)
+# tms = model_suffix
+# if model_suffix == '4':
+#     tms = '2'
+# axs[0, i].set_title(f'Model ' + tms, fontweight='bold', fontsize=18, y=1.05)
+
+# axs[0, i].set_xlabel('Reuse mode', fontweight='bold', fontsize=18, labelpad=15)
+# axs[0, i].set_ylabel('Accuracy', fontweight='bold', fontsize=18, labelpad=15)
 
 # Set xlabel and ylabel for the entire figure
 fig.text(0.5, 0.02, 'Reuse mode', fontweight='bold', fontsize=18, ha='center')
 if mode == 'accuracy':
     yl = 'Accuracy'
-    ylx = 0.08
+    ylx = 0.04
     yly = 0.5
 else:
     yl = 'Time to converge (in min)'
-    ylx = 0.04
+    ylx = 0.01
     yly = 0.5
 fig.text(ylx, yly, yl, fontweight='bold', fontsize=18, va='center', rotation='vertical')
 
