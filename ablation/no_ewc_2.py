@@ -130,7 +130,7 @@ for rpi in range(total_repeat):
 
         comboKey, modScore, monScore = evaluate_composition2(modules, data, scratchDict,
                                                              scratch_time, modular_dict,
-                                                             mode="positive max",
+                                                             evaluate_mode="positive max",
                                                              model_suffix=model_suffix,
                                                              num_sample=10 * num_sample)
 

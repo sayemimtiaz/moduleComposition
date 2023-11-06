@@ -12,7 +12,7 @@ from util.data_util import load_data_by_name, \
 
 positiveRatioInValid = 1.0  # Try with: 0.0, 0.5, 1.0, 2.0, 4.0
 trainModuleFromScratch = False
-doUntil = 20
+doUntil = 100
 positiveRatioInTrain = 1.0
 includePositive = True
 use_ewc = False
@@ -23,11 +23,12 @@ num_sample = 500
 logOutput = True
 
 is_load_combo = True
-mode = 'update'  # static or update
+mode = 'static'  # static or update or nll
 total_combination = 100
 total_repeat = 1
-model_suffix = ''
+model_suffix = '1'
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
+
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
@@ -38,17 +39,19 @@ for _d in datasets:
 result = {}
 scratchDict = {}
 scratch_time = {}
-modular_time = {}
-modular_dict = {}
+# modular_time = {}
+# modular_dict = {}
 
 if not is_load_combo:
     combos = get_combos(data, datasets, total_combination, _seed=11)
 else:
-    combos, scratchDict, scratch_time, modular_dict, modular_time = load_combos()
+    # name = 'static_repeat_0'
+    name='update_model1'
+    combos, scratchDict, scratch_time, modular_dict, modular_time = load_combos(name=name)
 
 # need to delete following two
-# scratchDict = {}
-# scratch_time = {}
+scratchDict = {}
+scratch_time = {}
 modular_time = {}
 modular_dict = {}
 
@@ -68,7 +71,7 @@ for rpi in range(total_repeat):
     if logOutput:
         out = open(os.path.join(base_path, "result", mode + "_repeat_" + str(rpi) + ".csv"), "w")
         out.write(
-            'Combination,Modularized Accuracy,Trained Model Accuracy,Accuracy Delta,Update Time,Scratch Time\n')
+            'Combination,Modularized Accuracy,Trained Model Accuracy,Accuracy Delta,Update Time,Scratch Time,Modular Eval Time\n')
 
         out.close()
     mod_time = {}
@@ -128,9 +131,9 @@ for rpi in range(total_repeat):
 
             modules[_d][_c] = module
 
-        comboKey, modScore, monScore = evaluate_composition2(modules, data, scratchDict,
+        comboKey, modScore, monScore,modEvalTime = evaluate_composition2(modules, data, scratchDict,
                                                              scratch_time, modular_dict,
-                                                             mode="positive max",
+                                                             evaluate_mode="positive max",
                                                              model_suffix=model_suffix,
                                                              num_sample=10 * num_sample)
 
@@ -153,7 +156,7 @@ for rpi in range(total_repeat):
                       str(avgMod) + ',' + str(scratchDict[comboKey])
                       + ',' + str(avgMod - scratchDict[comboKey])
                       + ',' + str(avgModTime)
-                      + ',' + str(scratch_time[comboKey])
+                      + ',' + str(scratch_time[comboKey])+','+str(modEvalTime)
                       + '\n')
 
             out.close()

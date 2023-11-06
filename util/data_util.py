@@ -120,12 +120,12 @@ def unarize(x_train_original, y_train_original, x_test_original, y_test_original
 
 
 def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_test_original, classes, labels,
-                       num_sample=-1):
+                       num_sample_train=-1, num_sample_test=-1):
     x_train = []
     y_train = []
 
     # train data change
-    if num_sample == -1:
+    if num_sample_train == -1:
         x_train = x_train_original[np.where(np.isin(y_train_original, classes))]
         y_train = y_train_original[np.where(np.isin(y_train_original, classes))]
     else:
@@ -134,7 +134,7 @@ def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_te
             x_train_temp = x_train_original[np.where(y_train_original == c)]
             y_train_temp = y_train_original[np.where(y_train_original == c)]
 
-            chosen_index = np.random.choice(range(len(x_train_temp)), min(len(x_train_temp), num_sample), replace=False)
+            chosen_index = np.random.choice(range(len(x_train_temp)), min(len(x_train_temp), num_sample_train), replace=False)
 
             x_train_temp, y_train_temp = x_train_temp[chosen_index], y_train_temp[chosen_index]
 
@@ -144,18 +144,33 @@ def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_te
             else:
                 x_train = np.concatenate((x_train, x_train_temp))
                 y_train = np.concatenate((y_train, y_train_temp))
-
     for y in range(len(y_train)):
         y_train[y] = labels[y_train[y]]
-
     y_train = np.array(y_train)
-
     x_train, y_train = shuffle(x_train, y_train, random_state=0)
 
-    x_test = x_test_original[np.where(np.isin(y_test_original, classes))]
-    y_test = []
-    for y in y_test_original[np.where(np.isin(y_test_original, classes))]:
-        y_test.append(labels[y])
+    if num_sample_test == -1:
+        x_test = x_test_original[np.where(np.isin(y_test_original, classes))]
+        y_test = y_test_original[np.where(np.isin(y_test_original, classes))]
+    else:
+        flag = False
+        for c in classes:
+            x_test_temp = x_test_original[np.where(y_test_original == c)]
+            y_test_temp = y_test_original[np.where(y_test_original == c)]
+
+            chosen_index = np.random.choice(range(len(x_test_temp)), min(len(x_test_temp), num_sample_test), replace=False)
+
+            x_test_temp, y_test_temp = x_test_temp[chosen_index], y_test_temp[chosen_index]
+
+            if not flag:
+                x_test, y_test = x_test_temp, y_test_temp
+                flag = True
+            else:
+                x_test = np.concatenate((x_test, x_test_temp))
+                y_test = np.concatenate((y_test, y_test_temp))
+
+    for y in range(len(y_test)):
+        y_test[y] = labels[y_test[y]]
 
     y_test = np.array(y_test)
 
@@ -164,30 +179,26 @@ def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_te
     return x_train, y_train, x_test, y_test
 
 
-def combine_for_reuse(modules, data, num_sample=-1):
+def combine_for_reuse(modules, data, num_sample_train=-1, num_sample_test=-1):
     lblCntr = 1
     labels = {}
     flag = False
-    combo_str = ''
     for _d in modules:
         labels[_d] = {}
         classes = []
         tmp_labels = {}
-        combo_str += '(' + str(_d) + ':'
         for _c in modules[_d]:
-            combo_str += str(_c) + '-'
             classes.append(_c)
             tmp_labels[_c] = lblCntr
             labels[_d][_c] = lblCntr
             lblCntr += 1
-        combo_str += ')'
 
         if not flag:
             xT, yT, xt, yt = make_reuse_dataset(data[_d][0], data[_d][1], data[_d][2],
-                                                data[_d][3], classes, tmp_labels, num_sample=num_sample)
+                                                data[_d][3], classes, tmp_labels, num_sample_train=num_sample_train, num_sample_test=num_sample_test)
         else:
             xT1, yT1, xt1, yt1 = make_reuse_dataset(data[_d][0], data[_d][1], data[_d][2],
-                                                    data[_d][3], classes, tmp_labels, num_sample=num_sample)
+                                                    data[_d][3], classes, tmp_labels, num_sample_train=num_sample_train, num_sample_test=num_sample_test)
             xT = np.concatenate((xT, xT1))
             yT = np.concatenate((yT, yT1))
             xt = np.concatenate((xt, xt1))
@@ -197,7 +208,7 @@ def combine_for_reuse(modules, data, num_sample=-1):
     xT, yT = shuffle(xT, yT, random_state=0)
     xt, yt = shuffle(xt, yt, random_state=0)
 
-    return xT, yT, xt, yt, combo_str, labels, lblCntr
+    return xT, yT, xt, yt, labels, lblCntr
 
 
 def makeScalar(data):

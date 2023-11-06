@@ -1,12 +1,15 @@
+import csv
 import math
 import os
+import random
 import time
 
 import numpy as np
 import scipy
-from keras import Input, Model
+from keras import Input, Model, Sequential
 from keras.callbacks import EarlyStopping
-from keras.layers import Dense, TimeDistributed, RepeatVector, LSTM, GRU, Dropout, Concatenate, Flatten, Average
+from keras.layers import Dense, TimeDistributed, RepeatVector, LSTM, GRU, Dropout, Concatenate, Flatten, Average, \
+    ZeroPadding1D, Reshape, Lambda, Conv2D, AveragePooling2D
 from keras.models import load_model
 from sklearn.metrics import accuracy_score
 import pandas as pd
@@ -15,6 +18,9 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from data_type.constants import Constants, ALL_GATE
 from data_type.enums import ActivationType, LayerType, getLayerType, getActivationType
 from data_type.modular_layer_type import ModularLayer
+import tensorflow as tf
+
+from util.data_util import load_data_by_name
 
 
 def softmax(x):
@@ -61,9 +67,14 @@ def initModularLayers(layers, timestep=None):
             myLayers[len(myLayers) - 1].next_layer = l
 
         if len(layers) == serial + 1:
-            l.last_layer = True
-            l.DW = l.W
-            l.DB = l.B
+            if l.type == LayerType.Activation:
+                myLayers[-1].last_layer = True
+                myLayers[-1].DW = myLayers[-1].W
+                myLayers[-1].DB = myLayers[-1].B
+            else:
+                l.last_layer = True
+                l.DW = l.W
+                l.DB = l.B
 
         myLayers.append(l)
         first = False
@@ -217,140 +228,160 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
               callbacks=[es]
               )
     end = time.time()
+    train_time = end - start
+    start = time.time()
     pred = model.predict(X_test[:len(Y_test)], verbose=verbose)
-    # from evaluation.accuracy_computer import getMonolithicModelPredictionAnyToOne
-    # pred = getMonolithicModelPredictionAnyToOne(model, X_test, Y_test)
     pred = pred.argmax(axis=-1)
     if len(Y_test.shape) > 1:
         score = accuracy_score(pred, Y_test.argmax(-1))
     else:
         score = accuracy_score(pred, Y_test)
-    return score, end - start, model
+    end = time.time()
+    eval_time = (end - start) / len(X_test)
+
+    return score, train_time, eval_time
 
 
-def compose_dynamically_and_train(modules, X_train, Y_train, X_test, Y_test, epochs=100, batch_size=32,
-                                  verbose=0
-                                  , nb_classes=2, activation='softmax', concatMode='average'):
-    if len(modules) == 0:
-        print('No modules to compose')
-        return
+def getBottleneckFeatures(model, data):
+    new_model = Model(inputs=model.input, outputs=model.layers[-4].output)
 
-    inputLayer = Input(shape=(28, 28))
+    output = new_model.predict(data)
 
-    flat = Flatten()(inputLayer)
+    return output
+
+
+def getBottleneckModule(module):
+    new_model = Model(inputs=module.input, outputs=module.layers[-3].output)
+
+    return new_model
+
+
+def getStackedLeNet(modules):
+    def add_pad_layer(data, desired_input_len=100):
+        return tf.pad(data, [[0, 0], [0, desired_input_len - tf.shape(data)[1]]])
+
+    flatten_size=[256, 352, 448, 544]
+    inputLayer = Input(shape=(28, 28, 1))
+
+    desired_output_size=256
+    for _d in modules:
+        for _c in modules[_d]:
+            for _m in modules[_d][_c]:
+                desired_output_size=max(desired_output_size, flatten_size[_m-1])
 
     frozen_modules = []
-
     for _d in modules:
         for _c in modules[_d]:
 
-            myLayers = initModularLayers(modules[_d][_c].layers)
+            for _m in modules[_d][_c]:
 
-            current = flat
-            for layerNo, _layer in enumerate(myLayers):
-                if _layer.last_layer:
-                    continue
-                if _layer.type == LayerType.Dense:
-                    current = Dense(_layer.num_node, activation=_layer.activation.name.lower(),
-                                    weights=modules[_d][_c].layers[layerNo].get_weights(), trainable=False)(current)
-                elif _layer.type == LayerType.Dropout:
-                    current = Dropout(modules[_d][_c].layers[layerNo].rate)(current)
+                myLayers = modules[_d][_c][_m].layers
 
-            frozen_modules.append(current)
+                current = inputLayer
+                for layer in myLayers[:-2]:
+                    if getLayerType(layer) == LayerType.Conv2D:
+                        current = Conv2D(layer.filters, activation='relu',
+                                         kernel_size=layer.kernel_size, strides=layer.strides,
+                                         weights=layer.get_weights(), trainable=False)(current)
+                    elif getLayerType(layer) == LayerType.AveragePooling2D:
+                        current = AveragePooling2D(pool_size=layer.pool_size, strides=layer.strides)(current)
+                    elif getLayerType(layer) == LayerType.Flatten:
+                        current = Flatten()(current)
 
-    if concatMode == 'average':
-        concatted = Average()(frozen_modules)
+                current = Lambda(lambda x: add_pad_layer(x, desired_input_len=desired_output_size))(current)
 
-    # s1_x1 = Dense(256, activation='relu', trainable=False,
-    #               weights=module1.layers[1].get_weights())(flat)
-    # s1_x2 = Dense(512, activation='relu', trainable=False,
-    #               weights=module1.layers[2].get_weights())(s1_x1)
-    # s1_x3 = Dense(1024, activation='relu', trainable=False,
-    #               weights=module1.layers[3].get_weights())(s1_x2)
-    # s1_x4 = Dense(2048, activation='relu', trainable=False,
-    #               weights=module1.layers[4].get_weights())(s1_x3)
-    #
-    # s2_x1 = Dense(256, activation='relu', trainable=False,
-    #               weights=module2.layers[1].get_weights())(flat)
-    # s2_x2 = Dense(512, activation='relu', trainable=False,
-    #               weights=module2.layers[2].get_weights())(s2_x1)
-    # s2_x3 = Dense(1024, activation='relu', trainable=False,
-    #               weights=module2.layers[3].get_weights())(s2_x2)
-    # s2_x4 = Dense(2048, activation='relu', trainable=False,
-    #               weights=module2.layers[4].get_weights())(s2_x3)
+                frozen_modules.append(current)
 
-    # concatted = Concatenate()([s1_x4, s2_x4])
-    # concatted = Average()([s1_x4, s2_x4])
+    current = Average()(frozen_modules)
 
-    output = Dense(units=nb_classes, activation=activation)(concatted)
+    model = Model(inputs=inputLayer, outputs=current)
 
-    model = Model(inputs=inputLayer, outputs=output)
-
-    model.compile(loss='categorical_crossentropy',
-                  optimizer='adam',
-                  metrics=['accuracy'])
-    es = EarlyStopping(monitor='val_accuracy', mode='max', patience=3)
-
-    start = time.time()
-
-    model.fit(X_train, Y_train,
-              epochs=epochs,
-              batch_size=batch_size,
-              validation_split=0.2,
-              verbose=verbose,
-              callbacks=[es])
-
-    end = time.time()
-
-    pred = model.predict(X_test[:len(Y_test)], verbose=0)
-    # from evaluation.accuracy_computer import getMonolithicModelPredictionAnyToOne
-    # pred = getMonolithicModelPredictionAnyToOne(model, X_test, Y_test)
-    pred = pred.argmax(axis=-1)
-    score = accuracy_score(pred, Y_test[:len(Y_test)])
-    return score, end - start
+    return model, len(frozen_modules)
 
 
-def compose_dynamically_and_train_approach2(modules, X_train, Y_train, X_test, Y_test, epochs=100, batch_size=32,
-                                            verbose=0
-                                            , nb_classes=2, activation='softmax', concatMode='average'):
-    if len(modules) == 0:
-        print('No modules to compose')
-        return
+def getStackedModel(modules):
+    def select_top_k(x, k=100):
+        top_values, _ = tf.math.top_k(x, k=k, sorted=True)
+        return top_values
+
+    def select_first_n(x, n):
+        return x[:, :n]
+
+    def add_pad_layer(data, desired_input_len=100):
+        return tf.pad(data, [[0, 0], [0, desired_input_len - tf.shape(data)[1]]])
 
     inputLayer = Input(shape=(28, 28))
 
     flat = Flatten()(inputLayer)
 
     frozen_modules = []
-
     for _d in modules:
-        myLayers = initModularLayers(modules[_d].layers)
+        for _c in modules[_d]:
 
-        current = flat
-        for layerNo, _layer in enumerate(myLayers):
-            if _layer.last_layer:
-                continue
-            if _layer.type == LayerType.Dense:
-                current = Dense(_layer.num_node, activation=_layer.activation.name.lower(),
-                                weights=modules[_d].layers[layerNo].get_weights(), trainable=False)(current)
-            elif _layer.type == LayerType.Dropout:
-                current = Dropout(modules[_d].layers[layerNo].rate)(current)
+            myLayers = modules[_d][_c].layers
 
-        frozen_modules.append(current)
+            current = flat
+            for layer in myLayers[:-2]:
+                if getLayerType(layer) == LayerType.Dense:
+                    current = Dense(layer.units, activation='relu',
+                                    weights=layer.get_weights(), trainable=False)(current)
 
-    if concatMode == 'average':
-        concatted = Average()(frozen_modules)
+            # current = Lambda(lambda x: select_first_n(x, n))(current)
+            # print(current.shape[1])
+            # current = add_pad_layer(current, current_input_len=current.shape[1], desired_input_len=100)
 
-    output = Dense(units=nb_classes, activation=activation)(concatted)
+            # current = Lambda(select_top_k)(current)
+            # current = Reshape((100, 1))(current)
+            # current = Lambda(lambda x: tf.reduce_mean(x, axis=1))(current)
 
-    model = Model(inputs=inputLayer, outputs=output)
+            current = Lambda(lambda x: add_pad_layer(x, desired_input_len=100))(current)
 
+            frozen_modules.append(current)
+
+    current = Average()(frozen_modules)
+    # current = Concatenate()(frozen_modules)
+    # current = Lambda(select_top_k)(current)
+
+    model = Model(inputs=inputLayer, outputs=current)
+
+    return model, len(frozen_modules)
+
+
+def getStackedPredict(modules, data):
+    accumulator = np.zeros((data.shape[0], 100))
+    num_module = 0
+    mod_times = []
+    for _d in modules:
+        for _c in modules[_d]:
+            start = time.time()
+            accumulator += modules[_d][_c].predict(data, verbose=0)
+            num_module += 1
+            end = time.time()
+            mod_times.append(end - start)
+    accumulator /= num_module
+    return accumulator, np.asarray(mod_times).mean()
+
+
+def trainDynamicInterface(cMod, numMod, X_train, Y_train, X_test, Y_test, epochs=30, batch_size=32,
+                          verbose=0
+                          , nb_classes=2):
+    # X_train, stack_time = getStackedPredict(modules, X_train)
+
+    start = time.time()
+    X_train = cMod.predict(X_train, verbose=0)
+    end = time.time()
+    stack_time = (end - start) / numMod
+
+    start = time.time()
+    model = Sequential()
+    model.add(Dense(120, activation='relu', input_shape=X_train.shape[1:]))
+    model.add(Dense(84, activation='relu'))
+    model.add(Dense(nb_classes, activation='softmax'))
+
+    es = EarlyStopping(monitor='val_accuracy', mode='max', patience=3)
     model.compile(loss='categorical_crossentropy',
                   optimizer='adam',
                   metrics=['accuracy'])
-    es = EarlyStopping(monitor='val_accuracy', mode='max', patience=3)
-
-    start = time.time()
 
     model.fit(X_train, Y_train,
               epochs=epochs,
@@ -361,82 +392,24 @@ def compose_dynamically_and_train_approach2(modules, X_train, Y_train, X_test, Y
 
     end = time.time()
 
+    train_time = stack_time + (end - start)
+
+    # X_test, stack_time = getStackedPredict(modules, X_test)
+    start = time.time()
+    X_test = cMod.predict(X_test, verbose=0)
+    end = time.time()
+
+    stack_time = (end - start) / numMod
+
+    start = time.time()
     pred = model.predict(X_test[:len(Y_test)], verbose=0)
-    # from evaluation.accuracy_computer import getMonolithicModelPredictionAnyToOne
-    # pred = getMonolithicModelPredictionAnyToOne(model, X_test, Y_test)
     pred = pred.argmax(axis=-1)
     score = accuracy_score(pred, Y_test[:len(Y_test)])
-    return score, end - start
-
-
-def trainModelAndPredictInBinaryForManyOutput(modelPath, X_train, Y_train, X_test, Y_test, epochs=5, batch_size=32,
-                                              verbose=0
-                                              , nb_classes=2, activation='softmax', timestep=2, oneToMany=True):
-    model = load_model(modelPath)
-
-    if oneToMany:
-        repeatFoundAt = 0
-        for i in range(len(model.layers)):
-            if getLayerType(model.layers[i]) == LayerType.RepeatVector:
-                repeatFoundAt = i
-                break
-
-        popedLayers = []
-        for i in range(repeatFoundAt, len(model.layers)):
-            popedLayers.append(model.layers[i])
-
-        remove = len(model.layers) - repeatFoundAt
-        i = 0
-        while i < remove:
-            i += 1
-            model.pop()
-
-        model.add(RepeatVector(timestep))
-        for i in range(1, len(popedLayers) - 1):
-            if getLayerType(popedLayers[i]) == LayerType.Dropout:
-                model.add(Dropout((popedLayers[i]).rate))
-            elif getLayerType(popedLayers[i]) == LayerType.LSTM:
-                model.add(LSTM(popedLayers[i].units, return_sequences=popedLayers[i].return_sequences,
-                               activation=getActivationType(popedLayers[i]).name.lower()))
-            elif getLayerType(popedLayers[i]) == LayerType.GRU:
-                model.add(GRU(popedLayers[i].units, return_sequences=popedLayers[i].return_sequences, reset_after=False,
-                              activation=getActivationType(popedLayers[i]).name.lower()))
-            else:
-                model.add(popedLayers[i])
-
-    else:
-        model.pop()
-
-    model.add(TimeDistributed(Dense(units=nb_classes, activation=activation, name='output')))
-
-    model.fit(X_train, Y_train,
-              epochs=epochs,
-              batch_size=batch_size,
-              verbose=verbose)
-    # pred = model.predict(X_test[:len(Y_test)])
-    # pred = pred.argmax(axis=-1)
-    # pred = pred.flatten()
-    # Y_test = Y_test.flatten()
-    # score = accuracy_score(pred, Y_test)
-    from evaluation.accuracy_computer import getMonolithicModelAccuracyAnyToMany
-    score = getMonolithicModelAccuracyAnyToMany(model, X_test, Y_test, skipDummyLabel=False)
-    return score
-
-
-def trainModelAndPredictOneToOne(modelPath, X_train, Y_train, X_test, Y_test, epochs=5, batch_size=32, verbose=0,
-                                 class_weights=None):
-    model = load_model(modelPath)
-
-    model.fit(X_train, Y_train,
-              epochs=epochs,
-              batch_size=batch_size,
-              verbose=verbose)
-    # pred = model.predict(X_test[:len(Y_test)])
-    from evaluation.accuracy_computer import getMonolithicModelPredictionAnyToOne
-    pred = getMonolithicModelPredictionAnyToOne(model, X_test, Y_test)
-    pred = pred.argmax(axis=-1)
-    score = accuracy_score(pred, Y_test[:len(Y_test)])
-    return score
+    end = time.time()
+    infer_time = end - start
+    infer_time /= len(X_test)
+    infer_time += (stack_time / len(X_test))
+    return score, train_time, infer_time
 
 
 def binarize_multi_label(y, class1, class2):
@@ -508,6 +481,7 @@ def calculate_50th_percentile_of_nodes_rolled(observed_values, refLayer, normali
 
 
 def get_mean_minus_outliers(data, m=2.):
+    data = np.asarray(data)
     d = np.abs(data - np.median(data))
     mdev = np.median(d)
     s = d / mdev if mdev else 0.
@@ -650,3 +624,129 @@ def extract_model_name(model_path):
     if model_path.find('/') != -1:
         model_path = model_path[model_path.rindex('/') + 1:]
     return model_path[:-3]
+
+
+def find_modules(ds, _c, mc, combos, totalModuleCount, data, num_model=4):
+    rs = len(ds)
+    for _i, _d in enumerate(ds):
+        if mc > totalModuleCount:
+            return False
+        if _i + 1 == len(ds):
+            tc = min(mc - rs + 1, data[_d][4])
+        else:
+            tc = random.randint(1, min(mc - rs + 1, data[_d][4]))
+
+        tmp = []
+        for _mo1 in range(data[_d][4]):
+            for _mo2 in range(1, num_model + 1):
+                tmp.append((_mo1, _mo2))
+        tmpidx = np.random.choice(len(tmp),
+                                  tc, replace=False)
+        new_tmp = []
+        for _mo1 in tmpidx:
+            new_tmp.append(tmp[_mo1])
+
+        combos[_c][_d] = new_tmp
+
+        mc -= tc
+        rs -= 1
+        totalModuleCount -= data[_d][4]
+
+    return mc == 0
+
+
+def get_combos(data, datasets, total_combination=10, _seed=19, debug=True):
+    combos = {}
+
+    random.seed(_seed)
+    np.random.seed(_seed)
+
+    for _c in range(total_combination):
+        combos[_c] = {}
+        ds = random.randint(2, len(datasets))
+        ds = np.random.choice(datasets, ds, replace=False)
+        totalModuleCount = 0
+        for _d in ds:
+            totalModuleCount += data[_d][4]
+
+        mc = random.randint(len(ds), totalModuleCount)
+
+        while True:
+            if find_modules(ds, _c, mc, combos, totalModuleCount, data):
+                break
+            if debug:
+                print('Retrying combo matching: ' + str(_c))
+    # print(combos)
+    return combos
+
+
+def load_combos(start=0, end=199):
+    base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+
+    combos = []
+
+    fileName = os.path.join(base_path, "result", "combinations.csv")
+    with open(fileName, 'r') as file:
+        _i = 0
+
+        for row in file:
+            if _i < start:
+                _i += 1
+                continue
+            if _i > end:
+                break
+            # combos[_i] = {}
+            combo = []
+            tcmb = row.strip()
+
+            tcmb = tcmb.replace('(', '')
+            tcmb = tcmb.split(')')[:-1]
+
+            for _c in tcmb:
+                tc = _c.split(':')
+                _d = tc[0].strip()
+                tc = tc[1].split('-')
+
+                rt = []
+                for r in tc:
+                    r = r.replace('[', '')
+                    r = r.replace(']', '')
+                    r = r.split(',')
+                    # rt.append((int(r[0]), int(r[1])))
+                    combo.append((_d, int(r[0]), int(r[1])))
+                # rt = sorted(rt, key=lambda x: x[0])
+                # combos[_i][_d] = rt
+            _i += 1
+
+            combos.append(combo)
+
+    return combos
+
+
+def create_combos():
+    datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
+
+    data = {}
+    for _d in datasets:
+        data[_d] = load_data_by_name(_d, hot=False)
+
+    combos = get_combos(data, datasets, 200, _seed=11)
+
+    base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    out = open(os.path.join(base_path, "result", "combinations.csv"), "w")
+
+    for _cmb in combos.keys():
+        s = ''
+        for _d in combos[_cmb].keys():
+            s += '(' + _d + ':'
+            for _c, _m in combos[_cmb][_d]:
+                s += '[' + str(_c) + ',' + str(_m) + ']'
+                if (_c, _m) != combos[_cmb][_d][-1]:
+                    s += '-'
+            s += ')'
+        out.write(s + '\n')
+
+    out.close()
+
+# create_combos()
+# load_combos()

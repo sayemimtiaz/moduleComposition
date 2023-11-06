@@ -2,6 +2,7 @@ import csv
 import os
 import pickle
 import random
+from time import time
 
 import numpy as np
 from sklearn.metrics import accuracy_score
@@ -11,7 +12,7 @@ from keras.utils import to_categorical
 from data_type.constants import Constants, DEBUG
 from update_concern.ewc_trainer import train
 from util.common import trainModelAndPredictInBinary
-from util.data_util import sample, unarize, make_reuse_dataset, combine_for_reuse
+from util.data_util import sample, unarize, combine_for_reuse
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
@@ -175,24 +176,27 @@ def evaluate_composition(dataset1, dataset2, modules1, modules2, data1, data2, u
     return result
 
 
-def evaluate_composition2(modules, data, scratchDict, scratch_time, modular_dict, mode='update', model_suffix='',
+def evaluate_composition2(modules, data, scratchDict, scratch_time, modular_dict, evaluate_mode='update',
+                          model_suffix='',
                           num_sample=100):
     Constants.disableUnrollMode()
     scratch_model_path = os.path.join(base_path, 'h5', 'model_scratch' + model_suffix + '.h5')
 
-    xT, yT, xt, yt, combo_str, labels, num_classes = combine_for_reuse(modules, data, num_sample=num_sample)
-
+    xT, yT, xt, yt, combo_str, labels, num_classes = combine_for_reuse(modules, data, num_sample_train=-1)
     print('Evaluating ' + combo_str)
-
+    n_eval = len(yt)
+    xt = xt[:n_eval]
+    yt = yt[:n_eval]
     if combo_str not in scratchDict:
         yT = to_categorical(yT)
         monScore, elpased, _ = trainModelAndPredictInBinary(scratch_model_path,
-                                                         xT, yT, xt, yt,
-                                                         nb_classes=num_classes)
+                                                            xT, yT, xt, yt,
+                                                            nb_classes=num_classes)
         scratchDict[combo_str] = monScore
         scratch_time[combo_str] = elpased
 
     if combo_str not in modular_dict:
+        start = time()
         preds = {}
         for _d in modules:
             preds[_d] = {}
@@ -212,46 +216,50 @@ def evaluate_composition2(modules, data, scratchDict, scratch_time, modular_dict
                         nc = 1
                     else:
                         nc = 0
-                    if mode == 'positive max':
-                        if maxp is None or maxp < preds[_d][_c][i][_c]:
-                            maxp = preds[_d][_c][i][_c]
+                    if evaluate_mode == 'positive max':
+                        pd = preds[_d][_c][i][_c]
+                        if maxp is None or maxp < pd:
+                            maxp = pd
                             ks = (_d, _c)
-                    elif mode == 'negative min':
-                        if minp is None or minp > preds[_d][_c][i][nc]:
-                            minp = preds[_d][_c][i][nc]
+
+                    elif evaluate_mode == 'negative min':
+                        pd = preds[_d][_c][i][nc]
+                        if minp is None or minp > pd:
+                            minp = pd
                             ks = (_d, _c)
-                    elif 'module win' in mode:
-                        if preds[_d][_c][i][_c] > preds[_d][_c][i][nc]:
+                    elif 'module win' in evaluate_mode:
+                        pd = preds[_d][_c][i][nc]
+                        if preds[_d][_c][i][_c] > pd:
                             winModule.append((_d, _c, nc))
                         allNegs.append((_d, _c, nc))
-                    elif mode == 'margin':
+                    elif evaluate_mode == 'margin':
                         tmr = preds[_d][_c][i][_c] - preds[_d][_c][i][nc]
                         if maxp is None or maxp < tmr:
                             maxp = tmr
                             ks = (_d, _c)
-                    elif mode == 'rate':
+                    elif evaluate_mode == 'rate':
                         tmr = preds[_d][_c][i][_c] / preds[_d][_c][i][nc]
                         if maxp is None or maxp < tmr:
                             maxp = tmr
                             ks = (_d, _c)
 
-            if 'module win' in mode:
+            if 'module win' in evaluate_mode:
                 minp = None
                 maxp = None
                 tmpMod = winModule
                 if len(tmpMod) == 0:
                     tmpMod = allNegs
-                if 'negative min' in mode:
+                if 'negative min' in evaluate_mode:
                     for (_d, _c, nc) in tmpMod:
                         if minp is None or preds[_d][_c][i][nc] < minp:
                             minp = preds[_d][_c][i][nc]
                             ks = (_d, _c)
-                elif 'positive max' in mode:
+                elif 'positive max' in evaluate_mode:
                     for (_d, _c, nc) in tmpMod:
                         if maxp is None or preds[_d][_c][i][_c] > maxp:
                             maxp = preds[_d][_c][i][_c]
                             ks = (_d, _c)
-                elif 'rate' in mode:
+                elif 'rate' in evaluate_mode:
                     for (_d, _c, nc) in tmpMod:
                         tmr = preds[_d][_c][i][_c] / preds[_d][_c][i][nc]
                         if maxp is None or tmr > maxp:
@@ -262,95 +270,30 @@ def evaluate_composition2(modules, data, scratchDict, scratch_time, modular_dict
         predLabels = np.asarray(predLabels)
         predLabels = predLabels.flatten()
         modScore = accuracy_score(predLabels, np.asarray(yt).flatten())
+        end = time()
+        modEvalTime = (end - start) / n_eval
+
     else:
         modScore = modular_dict[combo_str]
 
     print('Evaluating ' + combo_str)
-    print("Modularized Accuracy (" + mode + "): " + str(modScore))
+    print("Modularized Accuracy (" + evaluate_mode + "): " + str(modScore))
     print("Trained Accuracy: " + str(scratchDict[combo_str]))
 
-    return combo_str, modScore, scratchDict[combo_str]
+    return combo_str, modScore, scratchDict[combo_str], modEvalTime
 
 
-def find_modules(ds, _c, mc, combos, totalModuleCount, data):
-    rs = len(ds)
-    for _i, _d in enumerate(ds):
-        if mc > totalModuleCount:
-            return False
-        if _i + 1 == len(ds):
-            tc = min(mc - rs + 1, data[_d][4])
-        else:
-            tc = random.randint(1, min(mc - rs + 1, data[_d][4]))
+def evaluate_scratch(modules, data,
+                     num_sample_train=-1, num_sample_test=-1):
+    scratch_model_path = os.path.join(base_path, 'h5', 'model_scratch1' + '.h5')
 
-        combos[_c][_d] = sorted(np.random.choice(range(data[_d][4]),
-                                                 tc, replace=False))
+    xT, yT, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_train=num_sample_train, num_sample_test=num_sample_test)
+    yT = to_categorical(yT)
+    monScore, train_time, infer_time = trainModelAndPredictInBinary(scratch_model_path,
+                                                                    xT, yT, xt, yt,
+                                                                    nb_classes=num_classes)
 
-        mc -= tc
-        rs -= 1
-        totalModuleCount -= data[_d][4]
+    print("Trained Accuracy: " + str(monScore))
+    print("Trained time: " + str(train_time))
 
-    return mc == 0
-
-
-def get_combos(data, datasets, total_combination=10, _seed=19):
-    combos = {}
-
-    random.seed(_seed)
-    np.random.seed(_seed)
-
-    for _c in range(total_combination):
-        combos[_c] = {}
-        ds = random.randint(2, len(datasets))
-        ds = np.random.choice(datasets, ds, replace=False)
-        totalModuleCount = 0
-        for _d in ds:
-            totalModuleCount += data[_d][4]
-
-        mc = random.randint(len(ds), totalModuleCount)
-
-        while True:
-            if find_modules(ds, _c, mc, combos, totalModuleCount, data):
-                break
-            if DEBUG:
-                print('Retrying combo matching: ' + str(_c))
-    # print(combos)
-    return combos
-
-
-def load_combos(name='update_model1'):
-    combos = {}
-    scratchDict = {}
-    scratchTime = {}
-    modular_time = {}
-    modular_dict = {}
-
-    fileName = os.path.join(base_path, "result", name + ".csv")
-    with open(fileName) as csv_file:
-        csv_reader = csv.reader(csv_file)
-        next(csv_reader)
-        _i = 0
-        for row in csv_reader:
-            combos[_i] = {}
-            tcmb = row[0].strip()
-            scratchDict[tcmb] = float(row[2])
-            scratchTime[tcmb] = float(row[5])
-
-            modular_dict[tcmb] = float(row[1])
-            modular_time[tcmb] = float(row[4])
-
-            tcmb = tcmb.replace('(', '')
-            tcmb = tcmb.split(')')
-
-            for _c in tcmb[:-1]:
-                tc = _c.split(':')
-                _d = tc[0].strip()
-                tc = tc[1].split('-')[:-1]
-
-                rt = []
-                for r in tc:
-                    rt.append(int(r))
-                rt = sorted(rt)
-                combos[_i][_d] = rt
-            _i += 1
-
-    return combos, scratchDict, scratchTime, modular_dict, modular_time
+    return monScore, train_time, infer_time

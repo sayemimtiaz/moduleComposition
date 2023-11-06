@@ -74,7 +74,7 @@ class ModularLayer:
                     for ts in range(self.timestep):
                         self.lstm_node_val.append(np.array([0] * numNode).reshape(1, numNode))
 
-            if self.type == LayerType.Dense or self.type == LayerType.TimeDistributed:
+            if self.type == LayerType.Dense or self.type == LayerType.TimeDistributed or self.type == LayerType.Conv2D:
                 self.W, self.B = layer.get_weights()
                 self.initRegularModularWeights()
                 self.median_node_val = np.array([0.0] * self.num_node).reshape(1, self.num_node)

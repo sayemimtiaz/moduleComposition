@@ -13,6 +13,8 @@ class LayerType(enum.Enum):
     Input = 9,
     Dropout = 10,
     GRU = 11,
+    Conv2D=12,
+    AveragePooling2D=13,
     NotRecognized = 0
 
 
@@ -48,6 +50,11 @@ def getLayerType(layer):
         return LayerType.Input
     if type(layer).__name__.lower() == 'dropout':
         return LayerType.Dropout
+    if type(layer).__name__.lower() == 'conv2d':
+        return LayerType.Conv2D
+    if type(layer).__name__.lower() == 'averagepooling2d':
+        return LayerType.AveragePooling2D
+
     return LayerType.NotRecognized
 
 

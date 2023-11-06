@@ -1,22 +1,12 @@
 import os
 
 from keras.models import Sequential
-from keras.layers import Dense, Flatten, Dropout
+from keras.layers import Dense, Flatten, Dropout, Activation
 
 from util.data_util import get_mnist_data, get_fmnist_data, loadTensorFlowDataset
-# import ssl
-#
-# try:
-#     _create_unverified_https_context = ssl._create_unverified_context
-# except AttributeError:
-#     # Legacy Python that doesn't verify HTTPS certificates by default
-#     pass
-# else:
-#     # Handle target environment that doesn't support HTTPS verification
-#     ssl._create_default_https_context = _create_unverified_https_context
-#model_scratch
+
 root = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-model_name = os.path.join(root, 'h5', 'model_emnist4.h5')
+model_name = os.path.join(root, 'h5', 'model_scratch1.h5')
 
 if 'fmnist' in model_name:
     x_train, y_train, x_test, y_test, nb_classes = get_fmnist_data(hot=True)
@@ -33,15 +23,20 @@ rnn_model = Sequential()
 
 model.add(Flatten(input_shape=x_train.shape[1:]))
 
-model.add(Dense(100, activation='relu'))
-model.add(Dropout(0.2))
-model.add(Dense(100, activation='relu'))
-model.add(Dropout(0.2))
-model.add(Dense(100, activation='relu'))
-model.add(Dropout(0.2))
-model.add(Dense(100, activation='relu'))
-model.add(Dropout(0.2))
-model.add(Dense(nb_classes, activation='softmax'))
+model.add(Dense(30))
+model.add(Activation('relu'))
+model.add(Dropout(0.4))
+model.add(Dense(66))
+model.add(Activation('relu'))
+model.add(Dropout(0.4))
+# model.add(Dense(300))
+# model.add(Activation('relu'))
+# model.add(Dropout(0.4))
+# model.add(Dense(400))
+# model.add(Activation('relu'))
+# model.add(Dropout(0.4))
+model.add(Dense(nb_classes))
+model.add(Activation('softmax'))
 
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
