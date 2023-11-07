@@ -14,7 +14,7 @@ elif 'emnist' in model_name:
     x_train, y_train, x_test, y_test, nb_classes = loadTensorFlowDataset(datasetName='emnist', hot=True)
 elif 'kmnist' in model_name:
     x_train, y_train, x_test, y_test, nb_classes = loadTensorFlowDataset(datasetName='kmnist', hot=True)
-else:
+elif 'mnist' in model_name:
     x_train, y_train, x_test, y_test, nb_classes = get_mnist_data(hot=True)
 
 

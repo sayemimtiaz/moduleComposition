@@ -1,14 +1,11 @@
 import pickle
 from datetime import datetime
-import tensorflow as tf
 from modularization.channeling import channel
 from modularization.concern.concern_identification import *
 
 from keras.models import load_model
 
-from dynamic_composer.composer import evaluate_rolled
 from util.data_util import get_fmnist_data, get_mnist_data, loadTensorFlowDataset
-from util.sampling_util import sample_for_one_output
 
 # initially set unrolled mode , then disable
 Constants.disableUnrollMode()
@@ -132,5 +129,5 @@ for j in labs:
     # with open(maskFileName, 'wb') as handle:
     #     pickle.dump(masks, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-Constants.disableUnrollMode()
-evaluate_rolled(model_name)
+# Constants.disableUnrollMode()
+# evaluate_rolled(model_name)
