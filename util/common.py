@@ -657,7 +657,7 @@ def find_modules(ds, _c, mc, combos, totalModuleCount, data, num_model=4):
                                tc, replace=False)
         new_tmp = []
         for _mo1 in tmp:
-            new_tmp.append((_mo1, random.randint(1, num_model + 1)))
+            new_tmp.append((_mo1, random.randint(1, num_model)))
 
         combos[_c][_d] = new_tmp
 
