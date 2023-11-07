@@ -32,7 +32,7 @@ if logOutput:
 cPattern = {}
 for _cmb in range(len(comboList)):
     if logOutput:
-        out = open(os.path.join(base_path, "result", "dynamic_composition" + ".csv"), "w")
+        out = open(os.path.join(base_path, "result", "dynamic_composition" + ".csv"), "a")
 
     modules = {}
     tmp_update_time = []
