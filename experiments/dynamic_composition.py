@@ -13,7 +13,6 @@ datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
 end_index = 199
 
-
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 data = {}
@@ -35,7 +34,6 @@ for _cmb in range(len(comboList)):
         out = open(os.path.join(base_path, "result", "dynamic_composition" + ".csv"), "a")
 
     modules = {}
-    tmp_update_time = []
     print('Trying combo: ' + str(_cmb))
 
     for (_d, _c, _m) in comboList[_cmb]:
@@ -51,12 +49,13 @@ for _cmb in range(len(comboList)):
 
         modules[_d][_c][_m] = module
 
-    cModel, numMod =getStackedLeNet(modules)
+    cModel, numMod = getStackedLeNet(modules)
 
-    xT, yT, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_train=num_sample_train, num_sample_test=num_sample_test)
+    xT, yT, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_train=num_sample_train,
+                                                            num_sample_test=num_sample_test)
     yT = to_categorical(yT)
 
-    score, train_time, eval_time = trainDynamicInterface(cModel,numMod, xT, yT, xt, yt, nb_classes=num_classes)
+    score, train_time, eval_time = trainDynamicInterface(cModel, numMod, xT, yT, xt, yt, nb_classes=num_classes)
 
     if logOutput:
         out.write(str(_cmb)

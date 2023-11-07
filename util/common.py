@@ -372,23 +372,25 @@ def trainDynamicInterface(cMod, numMod, X_train, Y_train, X_test, Y_test, epochs
     end = time.time()
     stack_time = (end - start) / numMod
 
-    start = time.time()
     model = Sequential()
     model.add(Dense(120, activation='relu', input_shape=X_train.shape[1:]))
     model.add(Dense(84, activation='relu'))
     model.add(Dense(nb_classes, activation='softmax'))
 
-    es = EarlyStopping(monitor='val_accuracy', mode='max', patience=3)
     model.compile(loss='categorical_crossentropy',
                   optimizer='adam',
                   metrics=['accuracy'])
 
+    es = EarlyStopping(monitor='val_accuracy', mode='max', patience=3, restore_best_weights=True)
+
+    start = time.time()
     model.fit(X_train, Y_train,
               epochs=epochs,
               batch_size=batch_size,
-              validation_split=0.2,
+              validation_split=0.1,
               verbose=verbose,
-              callbacks=[es])
+              callbacks=[es]
+              )
 
     end = time.time()
 
