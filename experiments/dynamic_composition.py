@@ -43,7 +43,7 @@ for _cmb in range(len(comboList)):
         if _d not in modules:
             modules[_d] = {}
 
-        if _c not in modules[_c]:
+        if _c not in modules[_d]:
             modules[_d][_c] = {}
 
         module = load_model(os.path.join(base_path, 'modules', 'model_' + _d + str(_m),
