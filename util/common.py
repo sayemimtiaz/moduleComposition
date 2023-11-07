@@ -256,18 +256,20 @@ def getBottleneckModule(module):
     return new_model
 
 
-def getStackedLeNet(modules):
+def getStackedLeNet(modules, featureCnn=False):
     def add_pad_layer(data, desired_input_len=100):
         return tf.pad(data, [[0, 0], [0, desired_input_len - tf.shape(data)[1]]])
 
-    flatten_size=[256, 352, 448, 544]
-    inputLayer = Input(shape=(28, 28, 1))
+    desired_output_size = 84
+    if featureCnn:
+        flatten_size = [256, 352, 448, 544]
+        desired_output_size = 256
+        for _d in modules:
+            for _c in modules[_d]:
+                for _m in modules[_d][_c]:
+                    desired_output_size = max(desired_output_size, flatten_size[_m - 1])
 
-    desired_output_size=256
-    for _d in modules:
-        for _c in modules[_d]:
-            for _m in modules[_d][_c]:
-                desired_output_size=max(desired_output_size, flatten_size[_m-1])
+    inputLayer = Input(shape=(28, 28, 1))
 
     frozen_modules = []
     for _d in modules:
@@ -287,6 +289,9 @@ def getStackedLeNet(modules):
                         current = AveragePooling2D(pool_size=layer.pool_size, strides=layer.strides)(current)
                     elif getLayerType(layer) == LayerType.Flatten:
                         current = Flatten()(current)
+                    elif getLayerType(layer) == LayerType.Dense:
+                        current = Dense(layer.units, activation='relu',
+                                        weights=layer.get_weights(), trainable=False)(current)
 
                 current = Lambda(lambda x: add_pad_layer(x, desired_input_len=desired_output_size))(current)
 
@@ -638,15 +643,21 @@ def find_modules(ds, _c, mc, combos, totalModuleCount, data, num_model=4):
         else:
             tc = random.randint(1, min(mc - rs + 1, data[_d][4]))
 
-        tmp = []
-        for _mo1 in range(data[_d][4]):
-            for _mo2 in range(1, num_model + 1):
-                tmp.append((_mo1, _mo2))
-        tmpidx = np.random.choice(len(tmp),
-                                  tc, replace=False)
+        # tmp = []
+        # for _mo1 in range(data[_d][4]):
+        #     for _mo2 in range(1, num_model + 1):
+        #         tmp.append((_mo1, _mo2))
+        # tmpidx = np.random.choice(len(tmp),
+        #                           tc, replace=False)
+        # new_tmp = []
+        # for _mo1 in tmpidx:
+        #     new_tmp.append(tmp[_mo1])
+
+        tmp = np.random.choice(range(data[_d][4]),
+                               tc, replace=False)
         new_tmp = []
-        for _mo1 in tmpidx:
-            new_tmp.append(tmp[_mo1])
+        for _mo1 in tmp:
+            new_tmp.append((_mo1, random.randint(1, num_model + 1)))
 
         combos[_c][_d] = new_tmp
 
