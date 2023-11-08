@@ -2,7 +2,7 @@ import math
 
 import keras
 from keras.datasets import mnist, fashion_mnist
-from keras.utils.np_utils import to_categorical
+from keras.utils import to_categorical
 import numpy as np
 from sklearn.utils import shuffle
 import tensorflow as tf
