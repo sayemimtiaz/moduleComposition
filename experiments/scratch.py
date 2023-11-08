@@ -27,6 +27,7 @@ if logOutput:
 
     out.close()
 
+cmbId = start_index
 for _cmb in range(len(comboList)):
     if logOutput:
         out = open(os.path.join(base_path, "result", "scratch.csv"), "a")
@@ -43,12 +44,14 @@ for _cmb in range(len(comboList)):
             unique_modules[_d] = {}
         unique_modules[_d][_c] = 1
 
-    score, trainTime, inferTime = evaluate_scratch(unique_modules, data,num_sample_train=num_sample_train, num_sample_test=num_sample_test)
+    score, trainTime, inferTime = evaluate_scratch(unique_modules, data, num_sample_train=num_sample_train,
+                                                   num_sample_test=num_sample_test)
 
     if logOutput:
-        out.write(str(_cmb) + ',' +
+        out.write(str(cmbId) + ',' +
                   str(score) + ',' + str(trainTime)
                   + ',' + str(inferTime)
                   + '\n')
 
         out.close()
+    cmbId += 1

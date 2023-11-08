@@ -289,7 +289,7 @@ def getStackedLeNet(modules, featureCnn=False):
                         current = AveragePooling2D(pool_size=layer.pool_size, strides=layer.strides)(current)
                     elif getLayerType(layer) == LayerType.Flatten:
                         current = Flatten()(current)
-                    elif getLayerType(layer) == LayerType.Dense:
+                    elif not featureCnn and getLayerType(layer) == LayerType.Dense:
                         current = Dense(layer.units, activation='relu',
                                         weights=layer.get_weights(), trainable=False)(current)
 
@@ -369,7 +369,7 @@ def getStackedPredict(modules, data):
 
 def trainDynamicInterface(cMod, numMod, X_train, Y_train, X_test, Y_test, epochs=30, batch_size=32,
                           verbose=0
-                          , nb_classes=2):
+                          , nb_classes=2, featureCnn=False):
     # X_train, stack_time = getStackedPredict(modules, X_train)
 
     start = time.time()
@@ -378,9 +378,12 @@ def trainDynamicInterface(cMod, numMod, X_train, Y_train, X_test, Y_test, epochs
     stack_time = (end - start) / numMod
 
     model = Sequential()
-    # model.add(Dense(120, activation='relu', input_shape=X_train.shape[1:]))
-    # model.add(Dense(84, activation='relu'))
-    model.add(Dense(nb_classes, activation='softmax', input_shape=X_train.shape[1:]))
+    model.add(Input(shape=X_train.shape[1:]))
+
+    if featureCnn:
+        model.add(Dense(120, activation='relu'))
+        model.add(Dense(84, activation='relu'))
+    model.add(Dense(nb_classes, activation='softmax'))
 
     model.compile(loss='categorical_crossentropy',
                   optimizer='adam',
@@ -438,55 +441,6 @@ def binarize_multi_label(y, class1, class2):
     return []
 
 
-def calculate_50th_percentile_of_nodes_rolled(observed_values, refLayer, normalize=True, overrideReturnSequence=False):
-    num_node = refLayer.num_node
-
-    if ALL_GATE:
-        if refLayer.type == LayerType.LSTM:
-            num_node = num_node * 4
-        if refLayer.type == LayerType.GRU:
-            num_node = num_node * 3
-
-    for nodeNum in range(num_node):
-        tl = []
-
-        if ALL_GATE and ((refLayer.type == LayerType.LSTM and (
-                nodeNum < 2 * refLayer.num_node or nodeNum >= 3 * refLayer.num_node)) or \
-                         (refLayer.type == LayerType.GRU and nodeNum < 2 * refLayer.num_node)):
-            inactive = 0
-            active = 0
-            for o in observed_values:
-                if math.fabs(o[:, nodeNum]) < 0.5:
-                    inactive += 1
-                else:
-                    active += 1
-            refLayer.median_node_val[:, nodeNum] = active / (active + inactive)
-        else:
-            for o in observed_values:
-                if not overrideReturnSequence and refLayer.return_sequence:
-                    tl.append(math.fabs(o[refLayer.timestep - 1, :, nodeNum]))
-
-                else:
-                    tl.append(math.fabs(o[:, nodeNum]))
-            tl = np.asarray(tl).flatten()
-            # median = np.percentile(tl, 50)
-            median = get_mean_minus_outliers(tl)
-            refLayer.median_node_val[:, nodeNum] = median
-    #
-    # df_describe = pd.DataFrame(refLayer.median_node_val.flatten())
-    # print(df_describe.describe())
-
-    if normalize:
-        scaler = MinMaxScaler()
-        scaled = scaler.fit_transform(refLayer.median_node_val.reshape(-1, 1))
-
-        # df_describe = pd.DataFrame(scaled.flatten())
-        # print(df_describe.describe())
-
-        scaled = scaled.reshape(1, -1)
-        refLayer.median_node_val = scaled
-
-
 def get_mean_minus_outliers(data, m=2.):
     data = np.asarray(data)
     d = np.abs(data - np.median(data))
@@ -494,137 +448,6 @@ def get_mean_minus_outliers(data, m=2.):
     s = d / mdev if mdev else 0.
     d = data[s < m]
     return np.mean(d)
-
-
-def calculate_50th_percentile_of_nodes_unrolled(observed_values, refLayer, normalize=True):
-    num_node = refLayer.num_node
-    if ALL_GATE:
-        if refLayer.type == LayerType.LSTM:
-            num_node = num_node * 4
-        if refLayer.type == LayerType.GRU:
-            num_node = num_node * 3
-    for nodeNum in range(num_node):
-        for ts in range(refLayer.timestep):
-            tl = []
-
-            if ALL_GATE and ((refLayer.type == LayerType.LSTM and (
-                    nodeNum < 2 * refLayer.num_node or nodeNum >= 3 * refLayer.num_node)) or \
-                             (refLayer.type == LayerType.GRU and nodeNum < 2 * refLayer.num_node)):
-                inactive = 0
-                active = 0
-                for o in observed_values:
-                    if math.fabs(o[ts][:, nodeNum]) < 0.5:
-                        inactive += 1
-                    else:
-                        active += 1
-                refLayer.median_node_val[ts][:, nodeNum] = active / (active + inactive)
-            else:
-                for o in observed_values:
-                    tl.append(math.fabs(o[ts][:, nodeNum]))
-
-                tl = np.asarray(tl).flatten()
-                # median = np.percentile(tl, 50)
-                # median=np.mean(tl)
-                median = get_mean_minus_outliers(tl)
-                refLayer.median_node_val[ts][:, nodeNum] = median
-
-    if normalize:
-        for ts in range(refLayer.timestep):
-            scaler = MinMaxScaler()
-            scaled = scaler.fit_transform(refLayer.median_node_val[ts].reshape(-1, 1))
-
-            scaled = scaled.reshape(1, -1)
-            refLayer.median_node_val[ts] = scaled
-
-
-def calculate_relative_importance(observed_values, refLayer, noRemoveThreshold=0.5, percentile=50,
-                                  overrideReturnSequence=False):
-    maxValue = 0.0
-    num_node = refLayer.num_node
-    if refLayer.type == LayerType.LSTM:
-        num_node = num_node * 4
-    for nodeNum in range(num_node):
-        tl = []
-        for o in observed_values:
-            if not overrideReturnSequence and refLayer.return_sequence:
-                tl.append(math.fabs(o[refLayer.timestep - 1][:, nodeNum]))
-
-            else:
-                tl.append(math.fabs(o[:, nodeNum]))
-        tl = np.asarray(tl).flatten()
-        median = np.percentile(tl, percentile)
-        refLayer.median_node_val[:, nodeNum] = median
-        maxValue = max(maxValue, median)
-
-    for nodeNum in range(num_node):
-        if refLayer.median_node_val[:, nodeNum] > noRemoveThreshold:
-            refLayer.median_node_val[:, nodeNum] = 1.0
-        else:
-            refLayer.median_node_val[:, nodeNum] = refLayer.median_node_val[:, nodeNum] / maxValue
-
-
-def calculate_relative_importance_unrolled(observed_values, refLayer, noRemoveThreshold=0.5, percentile=50):
-    maxValue = {}
-    num_node = refLayer.num_node
-    if refLayer.type == LayerType.LSTM:
-        num_node = num_node * 4
-    for nodeNum in range(num_node):
-        for ts in range(refLayer.timestep):
-            if ts not in maxValue:
-                maxValue[ts] = 0.0
-
-            tl = []
-            for o in observed_values:
-                tl.append(math.fabs(o[ts][:, nodeNum]))
-
-            tl = np.asarray(tl).flatten()
-            median = np.percentile(tl, percentile)
-            refLayer.median_node_val[ts][:, nodeNum] = median
-            maxValue[ts] = max(maxValue[ts], median)
-
-    for nodeNum in range(num_node):
-        for ts in range(refLayer.timestep):
-            if refLayer.median_node_val[ts][:, nodeNum] > noRemoveThreshold:
-                refLayer.median_node_val[ts][:, nodeNum] = 1.0
-            else:
-                refLayer.median_node_val[ts][:, nodeNum] = refLayer.median_node_val[ts][:, nodeNum] / \
-                                                           maxValue[ts]
-
-
-def get_max_without(a, exceptIdx):
-    b = np.append(a[0:exceptIdx], a[exceptIdx + 1:])
-    return b.max()
-
-
-def calculate_active_rate_rolled(observed_values, refLayer):
-    num_node = refLayer.num_node
-
-    for nodeNum in range(num_node):
-        inactiveCount = 0
-        activeCount = 0
-        for o in observed_values:
-            if o[nodeNum] <= 0.0:
-                inactiveCount += 1
-            else:
-                activeCount += 1
-
-        refLayer.median_node_val[:, nodeNum] = activeCount / (activeCount + inactiveCount)
-
-
-def calculate_active_rate_unrolled(observed_values, refLayer):
-    num_node = refLayer.num_node
-    for nodeNum in range(num_node):
-        for ts in range(refLayer.timestep):
-            inactiveCount = 0
-            activeCount = 0
-            for o in observed_values:
-
-                if o[ts][:, nodeNum] <= 0.0:
-                    inactiveCount += 1
-                else:
-                    activeCount += 1
-
-            refLayer.median_node_val[ts][:, nodeNum] = activeCount / (activeCount + inactiveCount)
 
 
 def extract_model_name(model_path):
