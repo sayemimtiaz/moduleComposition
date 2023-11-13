@@ -559,6 +559,27 @@ def load_combos(start=0, end=199):
     return combos
 
 
+def load_smallest_comobs(bottom=1):
+    comboList = load_combos(start=0, end=199)
+
+    count = {}
+    for _cmb in range(len(comboList)):
+        count[_cmb] = len(comboList[_cmb])
+
+    count = dict(sorted(count.items(), key=lambda item: item[1]))
+
+    newComboList = []
+    i = 0
+    for _cmb in count.keys():
+        if i >= bottom:
+            break
+        print('Choosing combo: ', _cmb)
+        newComboList.append(comboList[_cmb])
+        i += 1
+
+    return newComboList
+
+
 def create_combos():
     datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 
