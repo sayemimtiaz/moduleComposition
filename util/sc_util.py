@@ -12,6 +12,8 @@ def validate_layer(layer):
         return True
     if isinstance(layer, Dense):
         return True
+    if isinstance(layer, Activation):
+        return True
     return False
 
 
@@ -50,6 +52,25 @@ def get_activation_pattern(model, x):
     return np.asarray(f_means), np.asarray(f_stds), end - start
 
 
+def infer_activation_pattern(model, _x):
+    obs = []
+
+    _x = tf.expand_dims(_x, axis=0)
+    _x = tf.expand_dims(_x, axis=-1)
+
+    for layerId, layer in enumerate(model.layers):
+        if isinstance(layer, Dropout):
+            continue
+        layer_output = layer(_x)
+
+        if validate_layer(layer):
+            obs.extend(layer_output[0].numpy().flatten())
+
+        _x = layer_output
+
+    return _x, np.asarray(obs)
+
+
 def get_logit(model, x, c):
     for layerId, layer in enumerate(model.layers):
         if isinstance(layer, Dropout) or isinstance(layer, Activation):
@@ -69,6 +90,49 @@ def getDistance(mean, std, obs):
     return z_score
 
 
+# def evaluate_sc(modules, data, cPattern,
+#                 num_sample=100, num_module=0):
+#     _, _, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_test=num_sample)
+#
+#     predLabels = []
+#     start = time.time()
+#
+#     for i in range(0, len(yt)):
+#         _x = tf.expand_dims(xt[i], axis=0)
+#
+#         tPattern = {}
+#         for _d in modules:
+#             tPattern[_d] = {}
+#             for _c in modules[_d]:
+#                 tPattern[_d][_c] = {}
+#                 for _m in modules[_d][_c]:
+#                     mean, std, _ = get_activation_pattern(modules[_d][_c][_m], _x)
+#                     tPattern[_d][_c][_m] = (mean, std)
+#
+#         minDis = None
+#         ks = None
+#         for _d in modules:
+#             for _c in modules[_d]:
+#                 for _m in modules[_d][_c]:
+#                     dis = getDistance(cPattern[_d][_c][_m][0], cPattern[_d][_c][_m][1], tPattern[_d][_c][_m][0])
+#                     if minDis is None or dis < minDis:
+#                         minDis = dis
+#                         ks = _d, _c
+#
+#         predLabels.append(labels[ks[0]][ks[1]])
+#
+#     predLabels = np.asarray(predLabels)
+#     predLabels = predLabels.flatten()
+#     modScore = accuracy_score(predLabels, np.asarray(yt).flatten())
+#     end = time.time()
+#
+#     inferTime = (end - start) / len(yt)
+#     inferTime /= num_module
+#     print("Modularized Accuracy: " + str(modScore))
+#
+#     return modScore, inferTime
+
+
 def evaluate_sc(modules, data, cPattern,
                 num_sample=100, num_module=0):
     _, _, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_test=num_sample)
@@ -77,28 +141,39 @@ def evaluate_sc(modules, data, cPattern,
     start = time.time()
 
     for i in range(0, len(yt)):
-        _x = tf.expand_dims(xt[i], axis=0)
 
         tPattern = {}
+        normalPreds = {}
         for _d in modules:
             tPattern[_d] = {}
+            normalPreds[_d] = {}
             for _c in modules[_d]:
                 tPattern[_d][_c] = {}
+                normalPreds[_d][_c] = {}
                 for _m in modules[_d][_c]:
-                    mean, std, _ = get_activation_pattern(modules[_d][_c][_m], _x)
-                    tPattern[_d][_c][_m] = (mean, std)
+                    pred, mean = infer_activation_pattern(modules[_d][_c][_m], xt[i])
+                    tPattern[_d][_c][_m] = mean
+                    normalPreds[_d][_c][_m] = pred
 
         minDis = None
-        ks = None
+        kds = None
         for _d in modules:
             for _c in modules[_d]:
                 for _m in modules[_d][_c]:
-                    dis = getDistance(cPattern[_d][_c][_m][0], cPattern[_d][_c][_m][1], tPattern[_d][_c][_m][0])
+                    dis = getDistance(cPattern[_d][_c][_m][0], cPattern[_d][_c][_m][1], tPattern[_d][_c][_m])
                     if minDis is None or dis < minDis:
                         minDis = dis
-                        ks = _d, _c
+                        kds = _d
 
-        predLabels.append(labels[ks[0]][ks[1]])
+        tmpPreds = []
+        tmpCs = []
+        for _c in modules[kds]:
+            for _m in modules[kds][_c]:
+                tmpPreds.append(normalPreds[kds][_c][_m][0][_c])
+                tmpCs.append(_c)
+
+        kdc = tmpPreds.index(max(tmpPreds))
+        predLabels.append(labels[kds][tmpCs[kdc]])
 
     predLabels = np.asarray(predLabels)
     predLabels = predLabels.flatten()
@@ -110,6 +185,64 @@ def evaluate_sc(modules, data, cPattern,
     print("Modularized Accuracy: " + str(modScore))
 
     return modScore, inferTime
+
+
+# def evaluate_sc(modules, data, cPattern,
+#                 num_sample=100, num_module=0):
+#     _, _, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_test=num_sample)
+#
+#     predLabels = []
+#     start = time.time()
+#
+#     for i in range(0, len(yt)):
+#
+#         tPattern = {}
+#         normalPreds = {}
+#         for _d in modules:
+#             tPattern[_d] = {}
+#             normalPreds[_d] = {}
+#             for _c in modules[_d]:
+#                 tPattern[_d][_c] = {}
+#                 normalPreds[_d][_c] = {}
+#                 for _m in modules[_d][_c]:
+#                     pred, mean = infer_activation_pattern(modules[_d][_c][_m], xt[i])
+#                     tPattern[_d][_c][_m] = mean
+#                     normalPreds[_d][_c][_m] = pred
+#
+#         dis = []
+#         kds = None
+#         for _d in modules:
+#             for _c in modules[_d]:
+#                 for _m in modules[_d][_c]:
+#                     dis.append(
+#                         (getDistance(cPattern[_d][_c][_m][0], cPattern[_d][_c][_m][1], tPattern[_d][_c][_m]),
+#                          _d, _c, _m))
+#
+#         dis = sorted(dis, key=lambda item: item[0])
+#         tmpPreds = []
+#         tmpCs = []
+#         until = max(int(len(dis) * 0.2), 1)
+#         i = 0
+#         for _, _d, _c, _m in dis:
+#             if i >= until:
+#                 break
+#             i += 1
+#             tmpPreds.append(normalPreds[_d][_c][_m][0][_c])
+#             tmpCs.append((_d,_c))
+#
+#         kdc = tmpPreds.index(max(tmpPreds))
+#         predLabels.append(labels[tmpCs[kdc][0]][tmpCs[kdc][1]])
+#
+#     predLabels = np.asarray(predLabels)
+#     predLabels = predLabels.flatten()
+#     modScore = accuracy_score(predLabels, np.asarray(yt).flatten())
+#     end = time.time()
+#
+#     inferTime = (end - start) / len(yt)
+#     inferTime /= num_module
+#     print("Modularized Accuracy: " + str(modScore))
+#
+#     return modScore, inferTime
 
 
 def evaluate_logit(modules, data,

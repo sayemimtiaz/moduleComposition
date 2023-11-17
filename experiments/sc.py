@@ -13,7 +13,6 @@ logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
 end_index = 199
-featureCnn = True
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
