@@ -276,51 +276,16 @@ def load_data_by_name(dataset, hot=True):
         return loadTensorFlowDataset(datasetName=dataset, hot=hot)
 
 
-def sample_and_combine_train_positive(data, targetMod, combo, negativeModule, positiveModule, num_sample=500, seed=19):
-    x = {}
-    i = 0
-    temp_y = []
-    negSampleCount = 0
-    for (d, c) in combo:
-        if (d, c) == targetMod:
-            continue
-        x[i], _ = sample((data[d][0], data[d][1]), sample_only_classes=[c],
-                         balance=True, num_sample=num_sample, seed=seed)
-        negSampleCount += len(x[i])
-        for j in range(len(x[i])):
-            temp_y.append(negativeModule)
-        i += 1
-
-    # x[i], _ = sample((data[targetMod[0]][0], data[targetMod[0]][1]), sample_only_classes=[targetMod[1]],
-    #                  balance=True, num_sample=negSampleCount, seed=seed)
-    # x[i], _ = sample((data[targetMod[0]][0], data[targetMod[0]][1]), sample_only_classes=[targetMod[1]],
-    #                  balance=True, num_sample=num_sample, seed=seed)
-    # for i in range(len(x[i])):
-    #     temp_y.append(positiveModule)
-    # for i in range(num_sample):
-    #     temp_y.append(positiveModule)
-
-    mx = x[0]
-    for i in range(1, len(x)):
-        mx = np.concatenate((mx, x[i]))
-
-    my = to_categorical(temp_y, data[targetMod[0]][4])
-
-    mx, my = shuffle(mx, my, random_state=0)
-
-    return mx, my
-
-
-def sample_and_combine_train_positive_for_ablation(data, targetMod, combo, negativeModule, positiveModule,
-                                                   num_sample=500, seed=19,
-                                                   includePositive=False, positiveRatio=1):
+def sample_train_ewc(data, targetMod, combo, negativeModule, positiveModule,
+                     num_sample=500, seed=19,
+                     includePositive=True, positiveRatio=1):
     x = {}
     i = 0
     temp_y = []
     # a_y =[]
     negSampleCount = 0
-    for (d, c) in combo:
-        if (d, c) == targetMod:
+    for (d, c, m) in combo:
+        if (d, c, m) == targetMod:
             continue
         x[i], _ = sample((data[d][0], data[d][1]), sample_only_classes=[c],
                          balance=True, num_sample=num_sample, seed=seed)
@@ -353,15 +318,15 @@ def sample_and_combine_train_positive_for_ablation(data, targetMod, combo, negat
     return mx, my
 
 
-def sample_and_combine_test_positive_for_ablation(data, targetMod, combo, negativeModule, positiveModule,
-                                                  num_sample=50, seed=19, positiveRatio=1):
+def sample_test_ewc(data, targetMod, combo, negativeModule, positiveModule,
+                    num_sample=50, seed=19, positiveRatio=1):
     x = {}
     i = 0
     temp_y = []
     # a_y =[]
     negSampleCount = 0
-    for (d, c) in combo:
-        if (d, c) == targetMod:
+    for (d, c, m) in combo:
+        if (d, c, m) == targetMod:
             continue
         x[i], _ = sample((data[d][2], data[d][3]), sample_only_classes=[c],
                          balance=True, num_sample=num_sample, seed=seed)

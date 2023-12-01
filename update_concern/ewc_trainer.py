@@ -87,7 +87,7 @@ def train_epoch(train_data, batch_size,
     return 0
 
 
-def compute_ewc_penalty_terms(model, old_data, ewc_samples=500, ewc_lambda=0.1,learning_rate=1e-3):
+def compute_ewc_penalty_terms(model, old_data, ewc_samples=500, ewc_lambda=0.1, learning_rate=1e-3):
     start = time.time()
     regularisers = []
 
@@ -96,7 +96,8 @@ def compute_ewc_penalty_terms(model, old_data, ewc_samples=500, ewc_lambda=0.1,l
     regularisers.append(loss_fn)
     compile_model(model, learning_rate, extra_losses=regularisers)
     end = time.time()
-    return end-start
+    return end - start
+
 
 def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, learning_rate=1e-3,
           use_ewc=False, ewc_lambda=1, ewc_samples=100, prior_mask=None,
@@ -128,8 +129,8 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
     if not use_incdet:
         incdet_threshold = None
 
+    start = time.time()
     if use_ewc:
-
         loss_fn = ewc.ewc_loss(ewc_lambda, model, old_data,
                                ewc_samples)
         regularisers.append(loss_fn)
@@ -156,41 +157,31 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
         if DEBUG:
             print(adjust, freeze)
 
-        # if adjust == 0:
-        #     return 0
         if DEBUG:
             print('Adjustment rate: ' + str((adjust / (adjust + freeze)) * 100.0) + '%')
 
+    end = time.time()
+
+    setupTime=end-start
     wait = 0
     priorAccuracy = evaluate(model, val_data)
     if DEBUG:
         print('Accuracy before training: ' + str(priorAccuracy))
     actualEpoch = 0
     best_weights = model.get_weights()
-    priorLoss = None
     improved = False
-    # model.fit(new_data[0], new_data[1],
-    #           epochs=epochs,
-    #           batch_size=batch_size,
-    #           verbose=0,
-    #           )
 
     train_step_fun = tf.function(train_step)
-    # train_step_fun=train_step
 
     start = time.time()
 
     for epoch in range(epochs):
         _ = train_epoch(new_data, batch_size,
-                                  gradient_mask=gradient_mask,
-                                  incdet_threshold=incdet_threshold)
+                        gradient_mask=gradient_mask,
+                        incdet_threshold=incdet_threshold)
         currentAccuracy = evaluate(model, val_data)
-        # print('Epoch: ' + str(epoch) + ' - ' + str(currentAccuracy))
         wait += 1
         if currentAccuracy > priorAccuracy:
-            # if priorLoss is None:
-            #     wait = 0
-            # elif currentLoss < priorLoss:
             wait = 0
             improved = True
             best_weights = model.get_weights()
@@ -201,7 +192,6 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
             break
 
         priorAccuracy = currentAccuracy
-        # priorLoss = currentLoss
         actualEpoch += 1
 
         # report(model, epoch, valid_sets, batch_size)
@@ -214,4 +204,4 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
         print('Actual epoch: ' + str(actualEpoch))
         print('Accuracy after training: ' + str(evaluate(model, val_data)))
 
-    return end - start
+    return setupTime, end - start

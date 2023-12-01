@@ -66,11 +66,9 @@ def ewc_loss(lam, model, dataset, samples):
     def loss_fn(new_model):
         # We're computing:
         # sum [(lambda / 2) * F * (current weights - optimal weights)^2]
-        loss = 0
-        current = new_model.trainable_weights
-        for f, c, o in zip(fisher_diagonal, current, optimal_weights):
-            loss += tf.reduce_sum(f * ((c - o) ** 2))
-
+        current_weights = new_model.trainable_weights
+        loss = sum([tf.reduce_sum(f * tf.square(tf.subtract(c, o))) for f, c, o in
+                    zip(fisher_diagonal, current_weights, optimal_weights)])
         return loss * (lam / 2)
 
     return loss_fn

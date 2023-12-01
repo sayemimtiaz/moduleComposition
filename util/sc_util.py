@@ -81,56 +81,9 @@ def get_logit(model, x, c):
 
 
 def getDistance(mean, std, obs):
-    # bina = (a[:,0] > 0).astype(int)
-    # binb = (b[:, 0] > 0).astype(int)
-    # bina=bina[:100]
-    # binb = binb[:100]
     valid_indices = std != 0.0
     z_score = np.sum(np.abs((obs[valid_indices] - mean[valid_indices]) / std[valid_indices]))
     return z_score
-
-
-# def evaluate_sc(modules, data, cPattern,
-#                 num_sample=100, num_module=0):
-#     _, _, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_test=num_sample)
-#
-#     predLabels = []
-#     start = time.time()
-#
-#     for i in range(0, len(yt)):
-#         _x = tf.expand_dims(xt[i], axis=0)
-#
-#         tPattern = {}
-#         for _d in modules:
-#             tPattern[_d] = {}
-#             for _c in modules[_d]:
-#                 tPattern[_d][_c] = {}
-#                 for _m in modules[_d][_c]:
-#                     mean, std, _ = get_activation_pattern(modules[_d][_c][_m], _x)
-#                     tPattern[_d][_c][_m] = (mean, std)
-#
-#         minDis = None
-#         ks = None
-#         for _d in modules:
-#             for _c in modules[_d]:
-#                 for _m in modules[_d][_c]:
-#                     dis = getDistance(cPattern[_d][_c][_m][0], cPattern[_d][_c][_m][1], tPattern[_d][_c][_m][0])
-#                     if minDis is None or dis < minDis:
-#                         minDis = dis
-#                         ks = _d, _c
-#
-#         predLabels.append(labels[ks[0]][ks[1]])
-#
-#     predLabels = np.asarray(predLabels)
-#     predLabels = predLabels.flatten()
-#     modScore = accuracy_score(predLabels, np.asarray(yt).flatten())
-#     end = time.time()
-#
-#     inferTime = (end - start) / len(yt)
-#     inferTime /= num_module
-#     print("Modularized Accuracy: " + str(modScore))
-#
-#     return modScore, inferTime
 
 
 def evaluate_sc(modules, data, cPattern,
@@ -185,64 +138,6 @@ def evaluate_sc(modules, data, cPattern,
     print("Modularized Accuracy: " + str(modScore))
 
     return modScore, inferTime
-
-
-# def evaluate_sc(modules, data, cPattern,
-#                 num_sample=100, num_module=0):
-#     _, _, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_test=num_sample)
-#
-#     predLabels = []
-#     start = time.time()
-#
-#     for i in range(0, len(yt)):
-#
-#         tPattern = {}
-#         normalPreds = {}
-#         for _d in modules:
-#             tPattern[_d] = {}
-#             normalPreds[_d] = {}
-#             for _c in modules[_d]:
-#                 tPattern[_d][_c] = {}
-#                 normalPreds[_d][_c] = {}
-#                 for _m in modules[_d][_c]:
-#                     pred, mean = infer_activation_pattern(modules[_d][_c][_m], xt[i])
-#                     tPattern[_d][_c][_m] = mean
-#                     normalPreds[_d][_c][_m] = pred
-#
-#         dis = []
-#         kds = None
-#         for _d in modules:
-#             for _c in modules[_d]:
-#                 for _m in modules[_d][_c]:
-#                     dis.append(
-#                         (getDistance(cPattern[_d][_c][_m][0], cPattern[_d][_c][_m][1], tPattern[_d][_c][_m]),
-#                          _d, _c, _m))
-#
-#         dis = sorted(dis, key=lambda item: item[0])
-#         tmpPreds = []
-#         tmpCs = []
-#         until = max(int(len(dis) * 0.2), 1)
-#         i = 0
-#         for _, _d, _c, _m in dis:
-#             if i >= until:
-#                 break
-#             i += 1
-#             tmpPreds.append(normalPreds[_d][_c][_m][0][_c])
-#             tmpCs.append((_d,_c))
-#
-#         kdc = tmpPreds.index(max(tmpPreds))
-#         predLabels.append(labels[tmpCs[kdc][0]][tmpCs[kdc][1]])
-#
-#     predLabels = np.asarray(predLabels)
-#     predLabels = predLabels.flatten()
-#     modScore = accuracy_score(predLabels, np.asarray(yt).flatten())
-#     end = time.time()
-#
-#     inferTime = (end - start) / len(yt)
-#     inferTime /= num_module
-#     print("Modularized Accuracy: " + str(modScore))
-#
-#     return modScore, inferTime
 
 
 def evaluate_logit(modules, data,

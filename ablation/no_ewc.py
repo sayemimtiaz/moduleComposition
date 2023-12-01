@@ -4,11 +4,11 @@ from keras.models import load_model
 from keras.utils import to_categorical
 
 from update_concern.ewc_trainer import evaluate
-from update_concern.ewc_util import get_combos, update2, evaluate_composition2, load_combos, update_for_ablation
+from update_concern.ewc_util import get_combos, update2, evaluate_ewc, load_combos, update_module
 from util.common import trainModelAndPredictInBinary
 from util.data_util import load_data_by_name, \
     sample_and_combine_train_positive, sample_and_combine_test_positive, sample, unarize, \
-    sample_and_combine_train_positive_for_ablation, sample_and_combine_test_positive_for_ablation
+    sample_train_ewc, sample_test_ewc
 
 positiveRatioInValid = 1.0  # Try with: 0.0, 0.5, 1.0, 2.0, 4.0
 trainModuleFromScratch = False
@@ -92,15 +92,15 @@ for rpi in range(total_repeat):
                 negativeModule = 1
 
             if mode == 'update' and len(modular_dict) == 0:
-                nx, ny = sample_and_combine_train_positive_for_ablation(data, (_d, _c), comboList[_cmb],
-                                                                        negativeModule, positiveModule,
-                                                                        num_sample=num_sample,
-                                                                        includePositive=includePositive,
-                                                                        positiveRatio=positiveRatioInTrain)
-                val_data = sample_and_combine_test_positive_for_ablation(data, (_d, _c), comboList[_cmb],
-                                                                         negativeModule,
-                                                                         positiveModule,
-                                                                         positiveRatio=positiveRatioInValid)
+                nx, ny = sample_train_ewc(data, (_d, _c), comboList[_cmb],
+                                          negativeModule, positiveModule,
+                                          num_sample=num_sample,
+                                          includePositive=includePositive,
+                                          positiveRatio=positiveRatioInTrain)
+                val_data = sample_test_ewc(data, (_d, _c), comboList[_cmb],
+                                           negativeModule,
+                                           positiveModule,
+                                           positiveRatio=positiveRatioInValid)
 
                 # _, _, jx, jy = unarize(data[_d][0], data[_d][1], data[_d][2], data[_d][3], _c, _c)
                 # jy = to_categorical(jy, data[_d][4])
@@ -122,20 +122,20 @@ for rpi in range(total_repeat):
                     tmp_update_time.append(elpas)
                 else:
                     tmp_update_time.append(
-                        update_for_ablation(module, data[_d][0], data[_d][1], nx, ny, val_data=val_data,
-                                            use_ewc=use_ewc,
-                                            use_incdet=use_incdet, ewc_lambda=ewc_lambda, incdet_thres=incdet_thres))
+                        update_module(module, data[_d][0], data[_d][1], nx, ny, val_data=val_data,
+                                      use_ewc=use_ewc,
+                                      use_incdet=use_incdet, ewc_lambda=ewc_lambda, incdet_thres=incdet_thres))
 
             if _d not in modules:
                 modules[_d] = {}
 
             modules[_d][_c] = module
 
-        comboKey, modScore, monScore,modEvalTime = evaluate_composition2(modules, data, scratchDict,
-                                                             scratch_time, modular_dict,
-                                                             evaluate_mode="positive max",
-                                                             model_suffix=model_suffix,
-                                                             num_sample=10 * num_sample)
+        comboKey, modScore, monScore,modEvalTime = evaluate_ewc(modules, data, scratchDict,
+                                                                scratch_time, modular_dict,
+                                                                evaluate_mode="positive max",
+                                                                model_suffix=model_suffix,
+                                                                num_sample=10 * num_sample)
 
         if mode == 'update':
             if len(modular_dict) == 0:
