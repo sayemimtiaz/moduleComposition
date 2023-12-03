@@ -9,10 +9,10 @@ from keras.optimizers import Adam
 from data_type.constants import DEBUG
 from update_concern import ewc
 
-model = None
-train_step_fun = None
-gradient_mask = None
-incdet_threshold = None
+# model = None
+# train_step_fun = None
+# gradient_mask = None
+# incdet_threshold = None
 
 
 def evaluate(model, val_data):
@@ -48,7 +48,7 @@ def compile_model(model, learning_rate, extra_losses=None):
 
 
 # @tf.function
-def train_step(inputs, labels):
+def train_step(model, inputs, labels, incdet_threshold=None, gradient_mask=None):
     with tf.GradientTape() as tape:
         outputs = model(inputs)
         loss = model.compiled_loss(labels, outputs)
@@ -66,9 +66,9 @@ def train_step(inputs, labels):
     return loss
 
 
-def train_epoch(train_data, batch_size,
-                gradient_mask=None, incdet_threshold=None):
-    global train_step_fun
+def train_epoch(model, train_data, batch_size,
+                gradient_mask=None, incdet_threshold=None, train_step_fun=None):
+    # global train_step_fun
     """Need a custom training loop for when we modify the gradients."""
     dataset = tf.data.Dataset.from_tensor_slices(train_data)
     dataset = dataset.shuffle(len(train_data[0])).batch(batch_size)
@@ -76,7 +76,7 @@ def train_epoch(train_data, batch_size,
 
     # overall_loss = tf.keras.metrics.Mean()
     for inputs, labels in dataset:
-        loss = train_step_fun(inputs, labels)
+        loss = train_step_fun(model, inputs, labels, incdet_threshold=incdet_threshold, gradient_mask=gradient_mask)
         # overall_loss.update_state(loss)
         # for variable in model.trainable_variables:
         #     if tf.reduce_any(tf.math.is_nan(variable)):
@@ -119,7 +119,7 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
     :param use_incdet: Should IncDet (incremental detection) be used?
     :param incdet_threshold: Threshold for IncDet gradient clipping.
     """
-    global model, train_step_fun, gradient_mask, incdet_threshold
+    # global model, train_step_fun, gradient_mask, incdet_threshold
     incdet_threshold = incdet_thres
 
     model = compile_model(_model, learning_rate)
@@ -176,9 +176,9 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
     start = time.time()
 
     for epoch in range(epochs):
-        _ = train_epoch(new_data, batch_size,
+        _ = train_epoch(model, new_data, batch_size,
                         gradient_mask=gradient_mask,
-                        incdet_threshold=incdet_threshold)
+                        incdet_threshold=incdet_threshold, train_step_fun=train_step_fun)
         currentAccuracy = evaluate(model, val_data)
         wait += 1
         if currentAccuracy > priorAccuracy:
@@ -198,7 +198,7 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
     end = time.time()
 
     del train_step_fun
-    train_step_fun = None
+    # train_step_fun = None
     if DEBUG:
         print("Took: " + str(end - start) + " sec")
         print('Actual epoch: ' + str(actualEpoch))

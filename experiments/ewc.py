@@ -1,9 +1,15 @@
+import concurrent
+import copy
+import multiprocessing
 import os
+import threading
+import time
+from queue import Queue
 
 from keras.models import load_model
 
 from update_concern.ewc_util import update_module, evaluate_ewc
-from util.common import load_smallest_comobs
+from util.common import load_smallest_comobs, load_combos
 from util.data_util import load_data_by_name, sample_train_ewc, sample_test_ewc
 
 num_sample_test = 100
@@ -12,8 +18,9 @@ logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
 end_index = 199
-positiveRatioInTrain = 1.0
+numMemorySample = 500
 positiveRatioInValid = 1.0
+runInParallel = True
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
@@ -21,8 +28,8 @@ data = {}
 for _d in datasets:
     data[_d] = load_data_by_name(_d, hot=False)
 
-# comboList = load_combos(start=start_index, end=end_index)
-comboList = load_smallest_comobs(bottom=3)
+comboList = load_combos(start=start_index, end=end_index)
+# comboList = load_smallest_comobs(bottom=3)
 if logOutput:
     out = open(os.path.join(base_path, "result", "ewc_composition" + ".csv"), "w")
     out.write(
@@ -40,6 +47,7 @@ for _cmb in range(len(comboList)):
     moduleCount[_cmb] = 0
     setupTime = 0
     updateTime = 0
+    start = time.time()
     for (_d, _c, _m) in comboList[_cmb]:
         print(_d, _c, _m)
 
@@ -49,30 +57,69 @@ for _cmb in range(len(comboList)):
         if _c not in modules[_d]:
             modules[_d][_c] = {}
 
-        positiveModule = _c
-        negativeModule = 0
-        if _c == 0:
-            negativeModule = 1
-
         module = load_model(os.path.join(base_path, 'modules', 'model_' + _d + str(_m),
                                          'module' + str(_c) + '.h5'))
+        if not runInParallel:
+            positiveModule = _c
+            negativeModule = 0
+            if _c == 0:
+                negativeModule = 1
 
-        nx, ny = sample_train_ewc(data, (_d, _c, _m), comboList[_cmb],
-                                  negativeModule, positiveModule,
-                                  num_sample=num_sample_train,
-                                  includePositive=True,
-                                  positiveRatio=positiveRatioInTrain)
-        val_data = sample_test_ewc(data, (_d, _c, _m), comboList[_cmb],
-                                   negativeModule,
-                                   positiveModule,
-                                   positiveRatio=positiveRatioInValid)
+            nx, ny = sample_train_ewc(data, (_d, _c, _m), comboList[_cmb],
+                                      negativeModule, positiveModule,
+                                      num_sample=num_sample_train,
+                                      includePositive=True,
+                                      numMemorySample=numMemorySample)
+            val_data = sample_test_ewc(data, (_d, _c, _m), comboList[_cmb],
+                                       negativeModule,
+                                       positiveModule,
+                                       positiveRatio=positiveRatioInValid)
 
-        curSetupTime, curUpdateTime = update_module(module, data[_d][0], data[_d][1], nx, ny, val_data=val_data)
-        setupTime += curSetupTime
-        updateTime += curUpdateTime
+            curSetupTime, curUpdateTime = update_module(module, data[_d][0], data[_d][1], nx, ny, val_data=val_data)
+            setupTime += curSetupTime
+            updateTime += curUpdateTime
 
         modules[_d][_c][_m] = module
 
+    if runInParallel:
+        threads = []
+        result_queue = Queue()
+
+        for (_d, _c, _m) in comboList[_cmb]:
+            positiveModule = _c
+            negativeModule = 0
+            if _c == 0:
+                negativeModule = 1
+            nx, ny = sample_train_ewc(data, (_d, _c, _m), comboList[_cmb],
+                                      negativeModule, positiveModule,
+                                      num_sample=num_sample_train,
+                                      includePositive=True,
+                                      numMemorySample=numMemorySample)
+            val_data = sample_test_ewc(data, (_d, _c, _m), comboList[_cmb],
+                                       negativeModule,
+                                       positiveModule,
+                                       positiveRatio=positiveRatioInValid)
+            nx_copy = copy.deepcopy(nx)
+            ny_copy = copy.deepcopy(ny)
+            val_data_copy = copy.deepcopy(val_data)
+
+            thread = threading.Thread(target=update_module,
+                                      kwargs={'module': modules[_d][_c][_m], 'old_train_x': copy.deepcopy(data[_d][0]),
+                                              'old_train_y': copy.deepcopy(data[_d][1]), 'new_train_x': nx_copy,
+                                              'new_train_y': ny_copy, 'val_data': val_data_copy,
+                                              'result_queue': result_queue})
+            threads.append(thread)
+            thread.start()
+
+        for process in threads:
+            process.join()
+        for _ in range(moduleCount[_cmb]):
+            curSetupTime, curUpdateTime = result_queue.get()
+            setupTime += curSetupTime
+            updateTime += curUpdateTime
+
+    end = time.time()
+    print('Overall time: ', (end - start))
     setupTime /= moduleCount[_cmb]
     updateTime /= moduleCount[_cmb]
 

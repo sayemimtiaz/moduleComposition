@@ -278,7 +278,7 @@ def load_data_by_name(dataset, hot=True):
 
 def sample_train_ewc(data, targetMod, combo, negativeModule, positiveModule,
                      num_sample=500, seed=19,
-                     includePositive=True, positiveRatio=1):
+                     includePositive=True, numMemorySample=1):
     x = {}
     i = 0
     temp_y = []
@@ -296,9 +296,9 @@ def sample_train_ewc(data, targetMod, combo, negativeModule, positiveModule,
         i += 1
 
     if includePositive:
-        posSampleCount = math.ceil(negSampleCount * positiveRatio)
+        # posSampleCount = math.ceil(negSampleCount * positiveRatio)
         x[i], _ = sample((data[targetMod[0]][0], data[targetMod[0]][1]), sample_only_classes=[targetMod[1]],
-                         balance=True, num_sample=posSampleCount, seed=seed)
+                         balance=True, num_sample=numMemorySample, seed=seed)
 
         for i in range(len(x[i])):
             temp_y.append(positiveModule)

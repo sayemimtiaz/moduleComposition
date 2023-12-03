@@ -17,13 +17,15 @@ from util.data_util import sample, unarize, combine_for_reuse
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 
-def update_module(module, old_train_x, old_train_y, new_train_x, new_train_y,
+def update_module(module=None, old_train_x=None, old_train_y=None, new_train_x=None, new_train_y=None,
                   val_data=None, use_ewc=True, use_fim=False, use_incdet=False, ewc_lambda=1.0,
-                  incdet_thres=1e-6):
-    return train(module, (new_train_x, new_train_y), (old_train_x, old_train_y),
-                 use_fim=use_fim, use_ewc=use_ewc, ewc_samples=500, prior_mask=None,
-                 fim_samples=500, fim_threshold=1e-3, val_data=val_data,
-                 use_incdet=use_incdet, incdet_thres=incdet_thres, ewc_lambda=ewc_lambda)
+                  incdet_thres=1e-6, result_queue=None):
+    result = train(module, (new_train_x, new_train_y), (old_train_x, old_train_y),
+                   use_fim=use_fim, use_ewc=use_ewc, ewc_samples=500, prior_mask=None,
+                   fim_samples=500, fim_threshold=1e-3, val_data=val_data,
+                   use_incdet=use_incdet, incdet_thres=incdet_thres, ewc_lambda=ewc_lambda)
+    result_queue.put(result)
+    return result
 
 
 def evaluate_ewc(modules, data, num_sample=100, num_module=0):
