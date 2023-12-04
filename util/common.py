@@ -569,6 +569,7 @@ def load_smallest_comobs(bottom=1):
     count = dict(sorted(count.items(), key=lambda item: item[1]))
 
     newComboList = []
+    # newComboList.append(comboList[63])
     i = 0
     for _cmb in count.keys():
         if i >= bottom:

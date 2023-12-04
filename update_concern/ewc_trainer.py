@@ -1,13 +1,17 @@
+import os
 import time
 
+import keras
 import numpy as np
 import tensorflow as tf
 from keras import regularizers
 from keras.losses import sparse_categorical_crossentropy, categorical_crossentropy
 from keras.optimizers import Adam
+from keras.models import load_model
 
 from data_type.constants import DEBUG
 from update_concern import ewc
+
 
 # model = None
 # train_step_fun = None
@@ -29,7 +33,16 @@ def evaluate(model, val_data):
     return accuracy
 
 
-def compile_model(model, learning_rate, extra_losses=None):
+# def custom_loss(y_true, y_pred, extra_losses=None, model=None):
+#     # loss = sparse_categorical_crossentropy(y_true, y_pred)
+#     loss = categorical_crossentropy(y_true, y_pred)
+#     if extra_losses is not None:
+#         for fn in extra_losses:
+#             loss += fn(model)
+#
+#     return loss
+
+def compile_model(model, learning_rate, extra_losses=None, load=False):
     def custom_loss(y_true, y_pred):
         # loss = sparse_categorical_crossentropy(y_true, y_pred)
         loss = categorical_crossentropy(y_true, y_pred)
@@ -38,6 +51,9 @@ def compile_model(model, learning_rate, extra_losses=None):
                 loss += fn(model)
 
         return loss
+
+    if load:
+        model = load_model(model, custom_objects={'custom_loss': custom_loss})
 
     model.compile(
         loss=custom_loss,
@@ -99,7 +115,7 @@ def compute_ewc_penalty_terms(model, old_data, ewc_samples=500, ewc_lambda=0.1, 
     return end - start
 
 
-def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, learning_rate=1e-3,
+def train(module_path, new_data, old_data, val_data=None, epochs=100, batch_size=32, learning_rate=1e-3,
           use_ewc=False, ewc_lambda=1, ewc_samples=100, prior_mask=None,
           use_fim=False, fim_threshold=1e-3, fim_samples=100,
           use_incdet=False, incdet_thres=1e-9, patience=3):
@@ -122,7 +138,7 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
     # global model, train_step_fun, gradient_mask, incdet_threshold
     incdet_threshold = incdet_thres
 
-    model = compile_model(_model, learning_rate)
+    model = compile_model(module_path, learning_rate, load=True)
 
     regularisers = []
     gradient_mask = None
@@ -134,7 +150,7 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
         loss_fn = ewc.ewc_loss(ewc_lambda, model, old_data,
                                ewc_samples)
         regularisers.append(loss_fn)
-        compile_model(model, learning_rate, extra_losses=regularisers)
+        model = compile_model(model, learning_rate, extra_losses=regularisers)
 
     # If using FIM, determine which weights must be frozen to preserve
     # performance on the current dataset.
@@ -162,7 +178,7 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
 
     end = time.time()
 
-    setupTime=end-start
+    setupTime = end - start
     wait = 0
     priorAccuracy = evaluate(model, val_data)
     if DEBUG:
@@ -203,5 +219,11 @@ def train(_model, new_data, old_data, val_data=None, epochs=100, batch_size=32, 
         print("Took: " + str(end - start) + " sec")
         print('Actual epoch: ' + str(actualEpoch))
         print('Accuracy after training: ' + str(evaluate(model, val_data)))
+
+    updated_module_path=module_path[:module_path.find('/modules/')]+'/modules/'+'updated/'+module_path[module_path.find('/modules/')+len('/modules/'):]
+    updated_dir=updated_module_path[:updated_module_path.rindex('/')]
+    if not os.path.exists(updated_dir):
+        os.makedirs(updated_dir)
+    model.save(updated_module_path)
 
     return setupTime, end - start
