@@ -68,11 +68,11 @@ def evaluate_ewc(modules, data, num_sample=100, num_module=0):
 
 
 def evaluate_scratch(modules, data,
-                     num_sample_train=-1, num_sample_test=-1):
+                     num_sample_train=-1, num_sample_test=-1, is_train_rate=False):
     scratch_model_path = os.path.join(base_path, 'h5', 'model_scratch1' + '.h5')
 
     xT, yT, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_train=num_sample_train,
-                                                            num_sample_test=num_sample_test)
+                                                            num_sample_test=num_sample_test, is_train_rate=is_train_rate)
     yT = to_categorical(yT)
     monScore, train_time, infer_time = trainModelAndPredictInBinary(scratch_model_path,
                                                                     xT, yT, xt, yt,

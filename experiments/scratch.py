@@ -6,11 +6,12 @@ from util.common import load_combos
 from util.data_util import load_data_by_name
 
 num_sample_test = 100
-num_sample_train = -1
+num_sample_train = 0.5
 logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
 end_index = 199
+is_train_rate = True
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
@@ -30,7 +31,7 @@ if logOutput:
 cmbId = start_index
 for _cmb in range(len(comboList)):
     if logOutput:
-        out = open(os.path.join(base_path, "result", "scratch.csv"), "a")
+        out = open(os.path.join(base_path, "result", "scratch_time.csv"), "a")
 
     unique_modules = {}
     tmp_update_time = []
@@ -45,7 +46,7 @@ for _cmb in range(len(comboList)):
         unique_modules[_d][_c] = 1
 
     score, trainTime, inferTime = evaluate_scratch(unique_modules, data, num_sample_train=num_sample_train,
-                                                   num_sample_test=num_sample_test)
+                                                   num_sample_test=num_sample_test, is_train_rate=is_train_rate)
 
     if logOutput:
         out.write(str(cmbId) + ',' +

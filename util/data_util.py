@@ -41,7 +41,7 @@ def get_fmnist_data(hot=True):
 
 def loadTensorFlowDataset(datasetName, hot=True):
     (x_train, y_train), \
-    (x_test, y_test) = \
+        (x_test, y_test) = \
         tfds.as_numpy(tfds.load(datasetName, split=['train', 'test'], batch_size=-1, as_supervised=True))
 
     # img = Image.fromarray(x_train[5].astype(np.uint8), 'RGB')
@@ -120,7 +120,7 @@ def unarize(x_train_original, y_train_original, x_test_original, y_test_original
 
 
 def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_test_original, classes, labels,
-                       num_sample_train=-1, num_sample_test=-1):
+                       num_sample_train=-1, num_sample_test=-1, is_train_rate=False):
     x_train = []
     y_train = []
 
@@ -134,7 +134,10 @@ def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_te
             x_train_temp = x_train_original[np.where(y_train_original == c)]
             y_train_temp = y_train_original[np.where(y_train_original == c)]
 
-            chosen_index = np.random.choice(range(len(x_train_temp)), min(len(x_train_temp), num_sample_train), replace=False)
+            nst = num_sample_train
+            if is_train_rate:
+                nst = len(x_train_temp) * nst
+            chosen_index = np.random.choice(range(len(x_train_temp)), min(len(x_train_temp), nst), replace=False)
 
             x_train_temp, y_train_temp = x_train_temp[chosen_index], y_train_temp[chosen_index]
 
@@ -158,7 +161,8 @@ def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_te
             x_test_temp = x_test_original[np.where(y_test_original == c)]
             y_test_temp = y_test_original[np.where(y_test_original == c)]
 
-            chosen_index = np.random.choice(range(len(x_test_temp)), min(len(x_test_temp), num_sample_test), replace=False)
+            chosen_index = np.random.choice(range(len(x_test_temp)), min(len(x_test_temp), num_sample_test),
+                                            replace=False)
 
             x_test_temp, y_test_temp = x_test_temp[chosen_index], y_test_temp[chosen_index]
 
@@ -179,7 +183,7 @@ def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_te
     return x_train, y_train, x_test, y_test
 
 
-def combine_for_reuse(modules, data, num_sample_train=-1, num_sample_test=-1):
+def combine_for_reuse(modules, data, num_sample_train=-1, num_sample_test=-1, is_train_rate=False):
     lblCntr = 1
     labels = {}
     flag = False
@@ -195,10 +199,12 @@ def combine_for_reuse(modules, data, num_sample_train=-1, num_sample_test=-1):
 
         if not flag:
             xT, yT, xt, yt = make_reuse_dataset(data[_d][0], data[_d][1], data[_d][2],
-                                                data[_d][3], classes, tmp_labels, num_sample_train=num_sample_train, num_sample_test=num_sample_test)
+                                                data[_d][3], classes, tmp_labels, num_sample_train=num_sample_train,
+                                                num_sample_test=num_sample_test, is_train_rate=is_train_rate)
         else:
             xT1, yT1, xt1, yt1 = make_reuse_dataset(data[_d][0], data[_d][1], data[_d][2],
-                                                    data[_d][3], classes, tmp_labels, num_sample_train=num_sample_train, num_sample_test=num_sample_test)
+                                                    data[_d][3], classes, tmp_labels, num_sample_train=num_sample_train,
+                                                    num_sample_test=num_sample_test, is_train_rate=is_train_rate)
             xT = np.concatenate((xT, xT1))
             yT = np.concatenate((yT, yT1))
             xt = np.concatenate((xt, xt1))
