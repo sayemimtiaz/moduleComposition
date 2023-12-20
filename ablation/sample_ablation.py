@@ -7,12 +7,12 @@ from util.data_util import load_data_by_name, sample_train_ewc, sample_test_ewc
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 num_sample_test = 100
-num_sample_train = 500
+num_sample_train = 0 # try with [0, 50, 100, 250, 500, 1000]
 logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
 end_index = 49
-numMemorySample = 500
+numMemorySample = 500  # try with [0, 50, 100, 250, 500, 1000]
 positiveRatioInValid = 1.0
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -24,7 +24,7 @@ for _d in datasets:
 comboList = load_combos(start=start_index, end=end_index)
 # comboList = load_smallest_comobs(bottom=3)
 if logOutput:
-    out = open(os.path.join(base_path, "result", "no_ewc" + ".csv"), "w")
+    out = open(os.path.join(base_path, "result", "memory_" +str(numMemorySample)+".csv"), "w")
     out.write(
         'Combination ID,Modularized Accuracy,Setup Time,Update Time,Inference Time\n')
     out.close()
@@ -34,7 +34,7 @@ moduleCount = {}
 cmbId = start_index
 for _cmb in range(len(comboList)):
     if logOutput:
-        out = open(os.path.join(base_path, "result", "no_ewc" + ".csv"), "a")
+        out = open(os.path.join(base_path, "result", "memory_" +str(numMemorySample)+".csv"), "a")
 
     modules = {}
     moduleCount[_cmb] = 0
@@ -50,8 +50,8 @@ for _cmb in range(len(comboList)):
         if _c not in modules[_d]:
             modules[_d][_c] = {}
 
-        module_path=os.path.join(base_path, 'modules', 'model_' + _d + str(_m),
-                                             'module' + str(_c) + '.h5')
+        module_path = os.path.join(base_path, 'modules', 'model_' + _d + str(_m),
+                                   'module' + str(_c) + '.h5')
         positiveModule = _c
         negativeModule = 0
         if _c == 0:
@@ -67,12 +67,12 @@ for _cmb in range(len(comboList)):
                                    positiveModule,
                                    positiveRatio=positiveRatioInValid)
 
-        curSetupTime, curUpdateTime = update_module(module_path, data[_d][0], data[_d][1], nx, ny, val_data=val_data, use_ewc=False)
+        curSetupTime, curUpdateTime = update_module(module_path, data[_d][0], data[_d][1], nx, ny, val_data=val_data)
         setupTime += curSetupTime
         updateTime += curUpdateTime
 
         modules[_d][_c][_m] = load_model(os.path.join(base_path, 'modules', 'updated', 'model_' + _d + str(_m),
-                                             'module' + str(_c) + '.h5'), compile=False)
+                                                      'module' + str(_c) + '.h5'), compile=False)
 
     end = time.time()
     print('Overall time: ', (end - start))
