@@ -136,7 +136,7 @@ def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_te
 
             nst = num_sample_train
             if is_train_rate:
-                nst = len(x_train_temp) * nst
+                nst = int(len(x_train_temp) * nst)
             chosen_index = np.random.choice(range(len(x_train_temp)), min(len(x_train_temp), nst), replace=False)
 
             x_train_temp, y_train_temp = x_train_temp[chosen_index], y_train_temp[chosen_index]
