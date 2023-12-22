@@ -12,7 +12,7 @@ logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
 end_index = 49
-numMemorySample = 500  # try with [0, 50, 100, 250, 500, 1000]
+numMemorySample = 500
 positiveRatioInValid = 1.0
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -24,7 +24,7 @@ for _d in datasets:
 comboList = load_combos(start=start_index, end=end_index)
 # comboList = load_smallest_comobs(bottom=3)
 if logOutput:
-    out = open(os.path.join(base_path, "result", "memory_" +str(numMemorySample)+".csv"), "w")
+    out = open(os.path.join(base_path, "result", "sample_" +str(num_sample_train)+".csv"), "w")
     out.write(
         'Combination ID,Modularized Accuracy,Setup Time,Update Time,Inference Time\n')
     out.close()
@@ -34,7 +34,7 @@ moduleCount = {}
 cmbId = start_index
 for _cmb in range(len(comboList)):
     if logOutput:
-        out = open(os.path.join(base_path, "result", "memory_" +str(numMemorySample)+".csv"), "a")
+        out = open(os.path.join(base_path, "result", "sample_" + str(num_sample_train) + ".csv"), "a")
 
     modules = {}
     moduleCount[_cmb] = 0
