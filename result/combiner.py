@@ -1,18 +1,17 @@
 import os
 import csv
 
-model_suffix = '2'
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
-out = open(os.path.join(base_path, "result", "combined_model" + model_suffix + ".csv"), "w")
+out = open(os.path.join(base_path, "result", "rq1" + ".csv"), "w")
 out.write(
-    'Serial,DeepCompose Accuracy,Static Composition Accuracy,Module Stacking Accuracy,Train-from-scratch Accuracy,'
-    'DeepCompose Training Time,'
-    'Module Stacking Training Time,Train-from-scratch Training Time,'
-    '#Dataset,#Modules,#MNIST,#EMNIST,#FMNIST,#KMNIST,Combination\n')
-updateFile = os.path.join(base_path, "result", "update_model" + model_suffix + ".csv")
-staticFile = os.path.join(base_path, "result", "static_model" + model_suffix + ".csv")
-stackingFile = os.path.join(base_path, "result", "dynamic_model" + model_suffix + ".csv")
+    'Combination ID,SC,MU,MS,Static,Scratch,'
+    '#Dataset,#Modules,#MNIST,#EMNIST,#FMNIST,#KMNIST\n')
+muFile = os.path.join(base_path, "result", "mu" + ".csv")
+staticFile = os.path.join(base_path, "result", "static"  + ".csv")
+msFile = os.path.join(base_path, "result", "ms"  + ".csv")
+scratchFile = os.path.join(base_path, "result", "scratch"  + ".csv")
+scFile = os.path.join(base_path, "result", "sc"  + ".csv")
 
 static_acc = {}
 with open(staticFile) as csv_file:
