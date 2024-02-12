@@ -24,7 +24,7 @@ for _d in datasets:
 comboList = load_combos(start=start_index, end=end_index)
 # comboList = load_smallest_comobs(bottom=3)
 if logOutput:
-    out = open(os.path.join(base_path, "result", "scratch" + ".csv"), "w")
+    out = open(os.path.join(base_path, "result", "static" + ".csv"), "w")
     out.write(
         'Combination ID,Modularized Accuracy,Inference Time\n')
     out.close()
@@ -33,7 +33,7 @@ moduleCount = {}
 cmbId = start_index
 for _cmb in range(len(comboList)):
     if logOutput:
-        out = open(os.path.join(base_path, "result", "scratch" + ".csv"), "a")
+        out = open(os.path.join(base_path, "result", "static" + ".csv"), "a")
 
     modules = {}
     moduleCount[_cmb] = 0

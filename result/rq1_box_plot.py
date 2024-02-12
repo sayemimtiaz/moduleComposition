@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-mode = 'time'  # or time
+mode = 'accuracy'  # accuracy or time
 
 
 def series_values_as_dict(series_object):
@@ -49,14 +49,9 @@ if mode == 'accuracy':
 else:
     fig, axs = plt.subplots(1, 1, figsize=(9, 10), squeeze=False, sharey=True)
 
-fileName = os.path.join(base_path, "result", "combined_model1" + ".csv")
+fileName = os.path.join(base_path, "result", "rq1" + ".csv")
 
 df = pd.read_csv(fileName)
-
-fileName = os.path.join(base_path, "result", "combined_model2" + ".csv")
-
-df1 = pd.read_csv(fileName)
-df = df.append(df1)
 
 if mode == 'accuracy':
     edgecolor = 'darkgoldenrod'
@@ -67,12 +62,13 @@ else:
 
 
 if mode == 'accuracy':
-    cols = ['DeepCompose', 'Voting', 'Scratch']
+    cols = ['Scratch', 'Voting-only', 'SC+Voting', 'Update', 'Stacking']
     df.rename(columns={
-        'DeepCompose Accuracy': 'DeepCompose',
-        'Static Composition Accuracy': 'Voting',
-        # 'Module Stacking Accuracy': 'Stacking',
-        'Train-from-scratch Accuracy': 'Scratch'
+        'Static': 'Voting-only',
+        'SC': 'SC+Voting',
+        'MU': 'Update',
+        'MS': 'Stacking',
+        'Scratch': 'Scratch'
     }, inplace=True)
 else:
     cols = ['DeepCompose', 'Scratch']
