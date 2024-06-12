@@ -12,7 +12,7 @@ logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
 end_index = 49
-numMemorySample = 0  # try with [0, 50, 100, 250, 500, 1000]
+numMemorySample = 0  # try with 2000
 positiveRatioInValid = 1.0
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))

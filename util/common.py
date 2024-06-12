@@ -11,7 +11,8 @@ from keras.callbacks import EarlyStopping
 from keras.layers import Dense, TimeDistributed, RepeatVector, LSTM, GRU, Dropout, Concatenate, Flatten, Average, \
     ZeroPadding1D, Reshape, Lambda, Conv2D, AveragePooling2D
 from keras.models import load_model
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score, confusion_matrix, \
+    classification_report
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
@@ -236,6 +237,40 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
         score = accuracy_score(pred, Y_test.argmax(-1))
     else:
         score = accuracy_score(pred, Y_test)
+
+    # Check if Y_test is one-hot encoded
+    if len(Y_test.shape) > 1:
+        true_labels = Y_test.argmax(axis=-1)
+    else:
+        true_labels = Y_test
+
+    # Calculate precision
+    precision = precision_score(true_labels, pred, average='weighted')
+
+    # Calculate recall
+    recall = recall_score(true_labels, pred, average='weighted')
+
+    # Calculate AUC
+    if len(Y_test.shape) > 1:
+        prob_pred = model.predict(X_test[:len(Y_test)])
+        auc = roc_auc_score(Y_test, prob_pred, multi_class='ovr')
+    else:
+        prob_pred = model.predict_proba(X_test[:len(Y_test)])
+        auc = roc_auc_score(Y_test, prob_pred[:, 1])
+
+    # Print the results
+    print(f'Precision: {precision}')
+    print(f'Recall: {recall}')
+    print(f'AUC: {auc}')
+
+    # Print confusion matrix
+    cm = confusion_matrix(true_labels, pred)
+    print("Confusion Matrix:\n", cm)
+
+
+    report = classification_report(true_labels, pred)
+    print("\nClassification Report:\n", report)
+
     end = time.time()
     eval_time = (end - start) / len(X_test)
 

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-mode = 'train'  # train or infer
+mode = 'infer'  # train or infer
 
 
 def series_values_as_dict(series_object):

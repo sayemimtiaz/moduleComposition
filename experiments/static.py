@@ -31,6 +31,8 @@ if logOutput:
 
 moduleCount = {}
 cmbId = start_index
+totalModule = 0
+
 for _cmb in range(len(comboList)):
     if logOutput:
         out = open(os.path.join(base_path, "result", "static" + ".csv"), "a")
@@ -39,6 +41,7 @@ for _cmb in range(len(comboList)):
     moduleCount[_cmb] = 0
     for (_d, _c, _m) in comboList[_cmb]:
         print(_d, _c, _m)
+        totalModule+=1
         moduleCount[_cmb] += 1
         if _d not in modules:
             modules[_d] = {}
@@ -46,18 +49,20 @@ for _cmb in range(len(comboList)):
         if _c not in modules[_d]:
             modules[_d][_c] = {}
 
-        module = load_model(os.path.join(base_path, 'modules', 'model_' + _d + str(_m),
-                                         'module' + str(_c) + '.h5'))
-
-        modules[_d][_c][_m] = module
-
-    score, eval_time = evaluate_ewc(modules, data,
-                                    num_sample=num_sample_test,
-                                    num_module=moduleCount[_cmb])
-    if logOutput:
-        out.write(str(cmbId)
-                  + ',' + str(score) + ',' + str(eval_time)
-                  + '\n')
-
-        out.close()
+        # module = load_model(os.path.join(base_path, 'modules', 'model_' + _d + str(_m),
+        #                                  'module' + str(_c) + '.h5'))
+        #
+        # modules[_d][_c][_m] = module
+    #
+    # score, eval_time = evaluate_ewc(modules, data,
+    #                                 num_sample=num_sample_test,
+    #                                 num_module=moduleCount[_cmb])
+    # if logOutput:
+    #     out.write(str(cmbId)
+    #               + ',' + str(score) + ',' + str(eval_time)
+    #               + '\n')
+    #
+    #     out.close()
     cmbId += 1
+
+print(totalModule/len(comboList))

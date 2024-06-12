@@ -1,4 +1,5 @@
 import math
+from collections import Counter
 
 import keras
 from keras.datasets import mnist, fashion_mnist
@@ -46,6 +47,33 @@ def loadTensorFlowDataset(datasetName, hot=True):
 
     # img = Image.fromarray(x_train[5].astype(np.uint8), 'RGB')
     # img.show()
+
+    # class_counts = Counter(y_test)
+    # for class_label, count in class_counts.items():
+    #     print(f'Class {class_label}: {count} samples')
+
+    # Calculate average and standard deviation of the sample counts
+    # counts = np.array(list(class_counts.values()))
+    # average = np.mean(counts)
+    # std_dev = np.std(counts)
+
+    # Determine classes within 1 standard deviation of the average
+    # within_one_std = [class_label for class_label, count in class_counts.items() if abs(count - average) <= std_dev]
+
+    # print(f'\nAverage number of samples: {average}')
+    # print(f'Standard deviation: {std_dev}')
+    # print(f'Number of classes within 1 standard deviation of the average: {len(within_one_std)}')
+    # # Calculate quartiles
+    # quartiles = np.percentile(counts, [25, 50, 75])
+    # Q1, Q2, Q3 = quartiles
+    # # Output quartiles
+    # print(f'\nQuartiles:')
+    # print(f'Q1 (25th percentile): {Q1}')
+    # print(f'Q2 (50th percentile / median): {Q2}')
+    # print(f'Q3 (75th percentile): {Q3}')
+
+    # within_500_to_1500 = [class_label for class_label, count in class_counts.items() if 500 <= count <= 1500]
+    # print(f'\nNumber of classes with counts between 500 and 1500: {len(within_500_to_1500)}')
 
     x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], x_train.shape[2]))
     x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], x_test.shape[2]))

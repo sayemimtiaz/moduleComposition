@@ -1,0 +1,20 @@
+RLHF
+model rewards whatever best
+
+it does not force model to learn an alternative representation, it basically teach it to rank its response
+
+in contrast, we teach model alternative representation. we also force model to forget "unsound" generation.
+
+a perfectly fine-tuned model will forget wrong intent.
+
+but our purpose is not to do ft. but achieve the same with less effort with effectiveness
+
+ft is just for benchmarking. time doesn ot matter for our approach
+
+in rq1, we compare compared to ft, how much can we fix while retaining model utility
+
+in rq2, we see if model remembers faulty data. baseline is our loss function with GA.
+
+its not fair to compare utlity with ft, because in our appraoch we don't learn them again
+
+we use gpt architecture as backbone and train it using six datasets as intial model. 
