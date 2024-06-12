@@ -259,8 +259,8 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
     print(f'AUC: {auc}')
 
     # Print confusion matrix
-    cm = confusion_matrix(true_labels, pred)
-    print("Confusion Matrix:\n", cm)
+    # cm = confusion_matrix(true_labels, pred)
+    # print("Confusion Matrix:\n", cm)
 
 
     report = classification_report(true_labels, pred)

@@ -25,35 +25,35 @@ for _d in datasets:
     frequency_dict[_d] = dict(zip(unique_values, counts))
     print(_d, min(counts), max(counts))
 
-# comboList = load_combos(start=start_index, end=end_index)
-comboList = load_smallest_comobs(bottom=1)
+comboList = load_combos(start=start_index, end=end_index)
+# comboList = load_smallest_comobs(bottom=1)
 
-# ratio={}
-# for _cmb in range(len(comboList)):
-#     mnc=None
-#     mxc=None
-#     for (_d, _c, _m) in comboList[_cmb]:
-#         nc=frequency_dict[_d][_c]
-#         if mnc is None:
-#             mnc=nc
-#             mxc=nc
-#         else:
-#             if mnc>nc:
-#                 mnc=nc
-#             if mxc < nc:
-#                 mxc = nc
-#     ratio[_cmb]=mnc/mxc
-# sorted_ratio = dict(sorted(ratio.items(), key=lambda item: item[1]))
-#
-# newComboList=[]
-# itr=0
-# for key, value in sorted_ratio.items():
-#     if itr>2:
-#         break
-#     newComboList.append(comboList[key])
-#     itr+=1
-#
-# comboList=newComboList
+ratio={}
+for _cmb in range(len(comboList)):
+    mnc=None
+    mxc=None
+    for (_d, _c, _m) in comboList[_cmb]:
+        nc=frequency_dict[_d][_c]
+        if mnc is None:
+            mnc=nc
+            mxc=nc
+        else:
+            if mnc>nc:
+                mnc=nc
+            if mxc < nc:
+                mxc = nc
+    ratio[_cmb]=mnc/mxc
+sorted_ratio = dict(sorted(ratio.items(), key=lambda item: item[1]))
+
+newComboList=[]
+itr=0
+for key, value in sorted_ratio.items():
+    if itr>6:
+        break
+    newComboList.append(comboList[key])
+    itr+=1
+
+comboList=newComboList
 
 if logOutput:
     out = open(os.path.join(base_path, "result", "scratch_time.csv"), "w")
