@@ -59,7 +59,7 @@ model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accur
 print(model.summary())
 
 if 'scratch' not in model_name:
-    epochs = 5
+    epochs = 1
 
     history = model.fit(x_train,
                         y_train,
@@ -73,8 +73,8 @@ if 'scratch' not in model_name:
 # model.save(model_name)
 
 # Make predictions
-pred = model.predict(x_test[:len(y_test)])
-pred = pred.argmax(axis=-1)
+pred_probs = model.predict(x_test[:len(y_test)])
+pred = pred_probs.argmax(axis=-1)
 
 # Check if Y_test is one-hot encoded
 if len(y_test.shape) > 1:
@@ -89,12 +89,10 @@ precision = precision_score(true_labels, pred, average='weighted')
 recall = recall_score(true_labels, pred, average='weighted')
 
 # Calculate AUC
-if len(y_test.shape) > 1:
-    prob_pred = model.predict(x_test[:len(y_test)])
-    auc = roc_auc_score(y_test, prob_pred, multi_class='ovr')
+if len(y_test.shape) > 1 and y_test.shape[1] > 1:
+    auc = roc_auc_score(y_test, pred_probs, multi_class='ovr')
 else:
-    prob_pred = model.predict_proba(x_test[:len(y_test)])
-    auc = roc_auc_score(y_test, prob_pred[:, 1])
+    auc = roc_auc_score(y_test, pred_probs, multi_class='ovr')
 
 # Print the results
 print(f'Precision: {precision}')

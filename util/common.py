@@ -231,8 +231,8 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
     end = time.time()
     train_time = end - start
     start = time.time()
-    pred = model.predict(X_test[:len(Y_test)], verbose=verbose)
-    pred = pred.argmax(axis=-1)
+    pred_probs = model.predict(X_test[:len(Y_test)], verbose=verbose)
+    pred = pred_probs.argmax(axis=-1)
     if len(Y_test.shape) > 1:
         score = accuracy_score(pred, Y_test.argmax(-1))
     else:
@@ -251,9 +251,9 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
     recall = recall_score(true_labels, pred, average='weighted')
 
     if len(Y_test.shape) > 1 and Y_test.shape[1] > 1:
-        auc = roc_auc_score(Y_test, pred, multi_class='ovr')
+        auc = roc_auc_score(Y_test, pred_probs, multi_class='ovr')
     else:
-        auc = roc_auc_score(Y_test, pred, multi_class='ovr')
+        auc = roc_auc_score(Y_test, pred_probs, multi_class='ovr')
 
     # Print the results
     print(f'Accuracy: {score}')
