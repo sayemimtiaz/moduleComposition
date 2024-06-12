@@ -250,7 +250,7 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
     # Calculate recall
     recall = recall_score(true_labels, pred, average='weighted')
 
-    auc = roc_auc_score(true_labels, pred_probs, multi_class='ovr')
+    auc = roc_auc_score(Y_test, pred_probs, multi_class='ovr')
 
     # Print the results
     print(f'Accuracy: {score}')
