@@ -250,16 +250,13 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
     # Calculate recall
     recall = recall_score(true_labels, pred, average='weighted')
 
-    if len(Y_test.shape) > 1 and Y_test.shape[1] > 1:
-        auc = roc_auc_score(Y_test, pred_probs, multi_class='ovr')
-    else:
-        auc = roc_auc_score(Y_test, pred_probs)
+    auc = roc_auc_score(true_labels, pred_probs, multi_class='ovr')
 
     # Print the results
     print(f'Accuracy: {score}')
     print(f'Precision: {precision}')
     print(f'Recall: {recall}')
-    # print(f'AUC: {auc}')
+    print(f'AUC: {auc}')
 
     # Print confusion matrix
     cm = confusion_matrix(true_labels, pred)
