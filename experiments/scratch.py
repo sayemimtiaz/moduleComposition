@@ -69,7 +69,7 @@ for _cmb in range(len(comboList)):
     tmp_update_time = []
 
     for (_d, _c, _m) in comboList[_cmb]:
-        print(_d, _c, _m)
+        # print(_d, _c, _m)
         module = load_model(os.path.join(base_path, 'modules', 'model_' + _d + str(_m),
                                          'module' + str(_c) + '.h5'))
 
