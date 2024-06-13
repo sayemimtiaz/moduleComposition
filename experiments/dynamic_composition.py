@@ -12,7 +12,7 @@ num_sample_train = -1
 logOutput = False
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
-end_index = 199
+end_index = 10
 featureCnn=True
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -27,8 +27,8 @@ for _d in datasets:
     # frequency_dict[_d] = dict(zip(unique_values, counts))
     # print(_d, min(counts), max(counts))
 
-# comboList = load_combos(start=start_index, end=end_index)
-comboList = load_smallest_comobs(bottom=5)
+comboList = load_combos(start=start_index, end=end_index)
+# comboList = load_smallest_comobs(bottom=5)
 
 
 
