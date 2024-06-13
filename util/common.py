@@ -432,15 +432,15 @@ def trainDynamicInterface(cMod, numMod, X_train, Y_train, X_test, Y_test, epochs
               callbacks=[es]
               )
 
-    # end = time.time()
-    #
-    # train_time = stack_time + (end - start)
-    #
-    # # X_test, stack_time = getStackedPredict(modules, X_test)
-    # start = time.time()
-    # X_test = cMod.predict(X_test, verbose=0)
-    # end = time.time()
-    #
+    end = time.time()
+
+    train_time = stack_time + (end - start)
+
+    # X_test, stack_time = getStackedPredict(modules, X_test)
+    start = time.time()
+    X_test = cMod.predict(X_test, verbose=0)
+    end = time.time()
+
     # stack_time = (end - start) / numMod
     #
     # start = time.time()
