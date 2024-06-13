@@ -12,7 +12,7 @@ num_sample_train = 500
 logOutput = False
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
-end_index = 199
+end_index = 10
 numMemorySample = 500
 positiveRatioInValid = 1.0
 
@@ -22,8 +22,8 @@ data = {}
 for _d in datasets:
     data[_d] = load_data_by_name(_d, hot=False)
 
-# comboList = load_combos(start=start_index, end=end_index)
-comboList = load_smallest_comobs(bottom=5)
+comboList = load_combos(start=start_index, end=end_index)
+# comboList = load_smallest_comobs(bottom=5)
 if logOutput:
     out = open(os.path.join(base_path, "result", "ewc_composition" + ".csv"), "w")
     out.write(
