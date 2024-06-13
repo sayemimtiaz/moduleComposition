@@ -250,6 +250,7 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
 
     # Calculate recall
     recall = recall_score(true_labels, pred, average='weighted')
+    print(keras.utils.to_categorical(Y_test, num_classes=nb_classes).shape, pred_probs.shape, nb_classes)
     auc = roc_auc_score(keras.utils.to_categorical(Y_test, num_classes=nb_classes), pred_probs, multi_class='ovr')
 
     # Print the results
