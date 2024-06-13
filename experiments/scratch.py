@@ -25,8 +25,8 @@ for _d in datasets:
     frequency_dict[_d] = dict(zip(unique_values, counts))
     print(_d, min(counts), max(counts))
 
-comboList = load_combos(start=start_index, end=end_index)
-# comboList = load_smallest_comobs(bottom=1)
+# comboList = load_combos(start=start_index, end=end_index)
+comboList = load_smallest_comobs(bottom=1)
 
 ratio={}
 for _cmb in range(len(comboList)):
