@@ -48,7 +48,7 @@ sorted_ratio = dict(sorted(ratio.items(), key=lambda item: item[1]))
 newComboList=[]
 itr=0
 for key, value in sorted_ratio.items():
-    if itr>6:
+    if itr>10:
         break
     newComboList.append(comboList[key])
     itr+=1
