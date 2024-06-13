@@ -5,7 +5,7 @@ from update_concern.ewc_util import evaluate_scratch
 from util.common import load_combos, load_smallest_comobs
 from util.data_util import load_data_by_name
 
-num_sample_test = 100
+num_sample_test = -1
 num_sample_train = 0.5
 logOutput = False
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
