@@ -13,7 +13,7 @@ from keras.layers import Dense, TimeDistributed, RepeatVector, LSTM, GRU, Dropou
     ZeroPadding1D, Reshape, Lambda, Conv2D, AveragePooling2D
 from keras.models import load_model
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score, confusion_matrix, \
-    classification_report
+    classification_report, f1_score
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
@@ -246,10 +246,11 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
         true_labels = Y_test
 
     # Calculate precision
-    precision = precision_score(true_labels, pred, average='weighted')
+    precision = precision_score(true_labels, pred, average='macro')
 
     # Calculate recall
-    recall = recall_score(true_labels, pred, average='weighted')
+    recall = recall_score(true_labels, pred, average='macro')
+    f1 = f1_score(true_labels, pred, average='macro')
     y_test=keras.utils.to_categorical(Y_test, num_classes=nb_classes)
     aucs = np.zeros(nb_classes)
     for i in range(nb_classes):
@@ -260,6 +261,7 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
     print(f'Accuracy: {score}')
     print(f'Precision: {precision}')
     print(f'Recall: {recall}')
+    print(f'F1: {f1}')
     print(f'AUC: {auc}')
 
     # Print confusion matrix
@@ -267,8 +269,8 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
     # print("Confusion Matrix:\n", cm)
 
 
-    report = classification_report(true_labels, pred)
-    print("\nClassification Report:\n", report)
+    # report = classification_report(true_labels, pred)
+    # print("\nClassification Report:\n", report)
 
     end = time.time()
     eval_time = (end - start) / len(X_test)
