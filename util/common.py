@@ -251,10 +251,13 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
     # Calculate recall
     recall = recall_score(true_labels, pred, average='weighted')
     y_test=keras.utils.to_categorical(Y_test, num_classes=nb_classes)
-    aucs = np.zeros(nb_classes)
+    aucs = []
     for i in range(nb_classes):
-        aucs[i] = roc_auc_score(y_test[:, i], pred_probs[:, i])
-    auc = aucs.mean()
+        try:
+            aucs.append(roc_auc_score(y_test[:, i], pred_probs[:, i]))
+        except:
+            pass
+    auc = np.asarray(aucs).mean()
 
     # Print the results
     print(f'Accuracy: {score}')
