@@ -255,7 +255,7 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
     aucs = []
     for i in range(nb_classes):
         try:
-            aucs[i] = roc_auc_score(y_test[:, i], pred_probs[:, i])
+            aucs.append(roc_auc_score(y_test[:, i], pred_probs[:, i]))
         except:
             pass
     auc = np.asarray(aucs).mean()
