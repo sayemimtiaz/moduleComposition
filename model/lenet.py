@@ -2,7 +2,8 @@ import os
 
 from keras.models import Sequential
 from keras.layers import Dense, Flatten, Dropout, Activation, Conv2D, AveragePooling2D
-from sklearn.metrics import precision_score, recall_score, roc_auc_score, confusion_matrix, classification_report
+from sklearn.metrics import precision_score, recall_score, roc_auc_score, confusion_matrix, classification_report, \
+    roc_curve, auc
 
 from util.data_util import get_mnist_data, get_fmnist_data, loadTensorFlowDataset
 import numpy as np
@@ -89,10 +90,15 @@ precision = precision_score(true_labels, pred, average='weighted')
 recall = recall_score(true_labels, pred, average='weighted')
 
 # Calculate AUC
-if len(y_test.shape) > 1 and y_test.shape[1] > 1:
-    auc = roc_auc_score(y_test, pred_probs, multi_class='ovr')
-else:
-    auc = roc_auc_score(y_test, pred_probs, multi_class='ovr')
+# if len(y_test.shape) > 1 and y_test.shape[1] > 1:
+#     auc = roc_auc_score(y_test, pred_probs, multi_class='ovr')
+# else:
+#     auc = roc_auc_score(y_test, pred_probs, multi_class='ovr')
+
+aucs = np.zeros(nb_classes)
+for i in range(nb_classes):
+    aucs[i] = roc_auc_score(y_test[:, i], pred_probs[:, i])
+auc=aucs.mean()
 
 # Print the results
 print(f'Precision: {precision}')
