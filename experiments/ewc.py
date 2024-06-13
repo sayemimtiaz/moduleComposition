@@ -4,11 +4,12 @@ from keras.models import load_model
 from update_concern.ewc_util import update_module, evaluate_ewc
 from util.common import load_smallest_comobs, load_combos
 from util.data_util import load_data_by_name, sample_train_ewc, sample_test_ewc
+import numpy as np
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-num_sample_test = 100
+num_sample_test = -1
 num_sample_train = 500
-logOutput = True
+logOutput = False
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
 end_index = 199
@@ -21,8 +22,8 @@ data = {}
 for _d in datasets:
     data[_d] = load_data_by_name(_d, hot=False)
 
-comboList = load_combos(start=start_index, end=end_index)
-# comboList = load_smallest_comobs(bottom=3)
+# comboList = load_combos(start=start_index, end=end_index)
+comboList = load_smallest_comobs(bottom=5)
 if logOutput:
     out = open(os.path.join(base_path, "result", "ewc_composition" + ".csv"), "w")
     out.write(
@@ -31,6 +32,11 @@ if logOutput:
 
 cPattern = {}
 moduleCount = {}
+precisions=[]
+recalls=[]
+f1s=[]
+aucs=[]
+accuracis=[]
 cmbId = start_index
 for _cmb in range(len(comboList)):
     if logOutput:
@@ -81,9 +87,16 @@ for _cmb in range(len(comboList)):
     setupTime /= moduleCount[_cmb]
     updateTime /= moduleCount[_cmb]
 
-    score, eval_time = evaluate_ewc(modules, data,
+    score, eval_time,precision, recall, f1, auc = evaluate_ewc(modules, data,
                                     num_sample=num_sample_test,
                                     num_module=moduleCount[_cmb])
+
+    accuracis.append(score)
+    precisions.append(precision)
+    recalls.append(recall)
+    f1s.append(f1)
+    aucs.append(auc)
+
     if logOutput:
         out.write(str(cmbId)
                   + ',' + str(score) + ',' + str(setupTime) + ',' + str(updateTime) + ',' +
@@ -92,3 +105,9 @@ for _cmb in range(len(comboList)):
 
         out.close()
     cmbId += 1
+
+print(f'Accuracy: {np.asarray(accuracis).mean()}')
+print(f'Precision: {np.asarray(precisions).mean()}')
+print(f'Recall: {np.asarray(recalls).mean()}')
+print(f'F1: {np.asarray(f1s).mean()}')
+print(f'AUC: {np.asarray(aucs).mean()}')

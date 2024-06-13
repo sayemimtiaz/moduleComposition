@@ -4,8 +4,9 @@ import pickle
 import random
 import time
 
+import keras
 import numpy as np
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 from sklearn.utils import shuffle
 from keras.utils import to_categorical
 
@@ -57,6 +58,26 @@ def evaluate_ewc(modules, data, num_sample=100, num_module=0):
     predLabels = np.asarray(predLabels)
     predLabels = predLabels.flatten()
     modScore = accuracy_score(predLabels, np.asarray(yt).flatten())
+
+    precision = precision_score(np.asarray(yt).flatten(), predLabels, average='macro')
+    recall = recall_score(np.asarray(yt).flatten(), predLabels, average='macro')
+    f1 = f1_score(np.asarray(yt).flatten(), predLabels, average='macro')
+    y_test = keras.utils.to_categorical(np.asarray(yt).flatten(), num_classes=num_classes)
+    pred_probs = keras.utils.to_categorical(predLabels, num_classes=num_classes)
+    aucs = []
+    for i in range(num_classes):
+        try:
+            aucs.append(roc_auc_score(y_test[:, i], pred_probs[:, i]))
+        except:
+            pass
+    auc = np.asarray(aucs).mean()
+
+    print(f'Accuracy: {modScore}')
+    print(f'Precision: {precision}')
+    print(f'Recall: {recall}')
+    print(f'F1: {f1}')
+    print(f'AUC: {auc}')
+
     end = time.time()
 
     inferTime = (end - start) / len(yt)
@@ -64,7 +85,7 @@ def evaluate_ewc(modules, data, num_sample=100, num_module=0):
 
     print("Modularized Accuracy: " + str(modScore))
 
-    return modScore, inferTime
+    return modScore, inferTime,precision, recall, f1, auc
 
 
 def evaluate_scratch(modules, data,
