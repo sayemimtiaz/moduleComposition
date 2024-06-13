@@ -267,13 +267,6 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
     print(f'F1: {f1}')
     print(f'AUC: {auc}')
 
-    # Print confusion matrix
-    # cm = confusion_matrix(true_labels, pred)
-    # print("Confusion Matrix:\n", cm)
-
-
-    # report = classification_report(true_labels, pred)
-    # print("\nClassification Report:\n", report)
 
     end = time.time()
     eval_time = (end - start) / len(X_test)
@@ -439,26 +432,69 @@ def trainDynamicInterface(cMod, numMod, X_train, Y_train, X_test, Y_test, epochs
               callbacks=[es]
               )
 
+    # end = time.time()
+    #
+    # train_time = stack_time + (end - start)
+    #
+    # # X_test, stack_time = getStackedPredict(modules, X_test)
+    # start = time.time()
+    # X_test = cMod.predict(X_test, verbose=0)
+    # end = time.time()
+    #
+    # stack_time = (end - start) / numMod
+    #
+    # start = time.time()
+    # pred = model.predict(X_test[:len(Y_test)], verbose=0)
+    # pred = pred.argmax(axis=-1)
+    # score = accuracy_score(pred, Y_test[:len(Y_test)])
+    # end = time.time()
+    # infer_time = end - start
+    # infer_time /= len(X_test)
+    # infer_time += (stack_time / len(X_test))
+    # return score, train_time, infer_time
+
     end = time.time()
-
-    train_time = stack_time + (end - start)
-
-    # X_test, stack_time = getStackedPredict(modules, X_test)
+    train_time = end - start
     start = time.time()
-    X_test = cMod.predict(X_test, verbose=0)
-    end = time.time()
+    pred_probs = model.predict(X_test[:len(Y_test)], verbose=verbose)
+    pred = pred_probs.argmax(axis=-1)
+    if len(Y_test.shape) > 1:
+        score = accuracy_score(pred, Y_test.argmax(-1))
+    else:
+        score = accuracy_score(pred, Y_test)
 
-    stack_time = (end - start) / numMod
+    # Check if Y_test is one-hot encoded
+    if len(Y_test.shape) > 1:
+        true_labels = Y_test.argmax(axis=-1)
+    else:
+        true_labels = Y_test
 
-    start = time.time()
-    pred = model.predict(X_test[:len(Y_test)], verbose=0)
-    pred = pred.argmax(axis=-1)
-    score = accuracy_score(pred, Y_test[:len(Y_test)])
+    # Calculate precision
+    precision = precision_score(true_labels, pred, average='macro')
+
+    # Calculate recall
+    recall = recall_score(true_labels, pred, average='macro')
+    f1 = f1_score(true_labels, pred, average='macro')
+    y_test = keras.utils.to_categorical(Y_test, num_classes=nb_classes)
+    aucs = []
+    for i in range(nb_classes):
+        try:
+            aucs.append(roc_auc_score(y_test[:, i], pred_probs[:, i]))
+        except:
+            pass
+    auc = np.asarray(aucs).mean()
+
+    # Print the results
+    print(f'Accuracy: {score}')
+    print(f'Precision: {precision}')
+    print(f'Recall: {recall}')
+    print(f'F1: {f1}')
+    print(f'AUC: {auc}')
+
     end = time.time()
-    infer_time = end - start
-    infer_time /= len(X_test)
-    infer_time += (stack_time / len(X_test))
-    return score, train_time, infer_time
+    eval_time = (end - start) / len(X_test)
+
+    return score, train_time, eval_time, precision, recall, f1, auc
 
 
 def binarize_multi_label(y, class1, class2):
