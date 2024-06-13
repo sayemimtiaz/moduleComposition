@@ -74,11 +74,11 @@ def evaluate_scratch(modules, data,
     xT, yT, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_train=num_sample_train,
                                                             num_sample_test=num_sample_test, is_train_rate=is_train_rate)
     yT = to_categorical(yT)
-    monScore, train_time, infer_time = trainModelAndPredictInBinary(scratch_model_path,
+    monScore, train_time, infer_time, precision, recall, f1, auc = trainModelAndPredictInBinary(scratch_model_path,
                                                                     xT, yT, xt, yt,
                                                                     nb_classes=num_classes)
 
     print("Trained Accuracy: " + str(monScore))
     print("Trained time: " + str(train_time))
 
-    return monScore, train_time, infer_time
+    return monScore, train_time, infer_time, precision, recall, f1, auc

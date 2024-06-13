@@ -252,13 +252,10 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
     recall = recall_score(true_labels, pred, average='macro')
     f1 = f1_score(true_labels, pred, average='macro')
     y_test=keras.utils.to_categorical(Y_test, num_classes=nb_classes)
-    aucs = []
+    aucs = np.zeros(nb_classes)
     for i in range(nb_classes):
-        try:
-            aucs.append(roc_auc_score(y_test[:, i], pred_probs[:, i]))
-        except:
-            pass
-    auc = np.asarray(aucs).mean()
+        aucs[i] = roc_auc_score(y_test[:, i], pred_probs[:, i])
+    auc = aucs.mean()
 
     # Print the results
     print(f'Accuracy: {score}')
@@ -278,7 +275,7 @@ def trainModelAndPredictInBinary(modelPath, X_train, Y_train, X_test, Y_test, ep
     end = time.time()
     eval_time = (end - start) / len(X_test)
 
-    return score, train_time, eval_time
+    return score, train_time, eval_time, precision, recall, f1, auc
 
 
 def getBottleneckFeatures(model, data):

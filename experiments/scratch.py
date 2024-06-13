@@ -48,7 +48,7 @@ sorted_ratio = dict(sorted(ratio.items(), key=lambda item: item[1]))
 newComboList=[]
 itr=0
 for key, value in sorted_ratio.items():
-    if itr>10:
+    if itr>20:
         break
     newComboList.append(comboList[key])
     itr+=1
@@ -63,6 +63,11 @@ if logOutput:
     out.close()
 
 cmbId = start_index
+precisions=[]
+recalls=[]
+f1s=[]
+aucs=[]
+accuracis=[]
 for _cmb in range(len(comboList)):
     if logOutput:
         out = open(os.path.join(base_path, "result", "scratch_time.csv"), "a")
@@ -79,8 +84,14 @@ for _cmb in range(len(comboList)):
             unique_modules[_d] = {}
         unique_modules[_d][_c] = 1
 
-    score, trainTime, inferTime = evaluate_scratch(unique_modules, data, num_sample_train=num_sample_train,
+    score, trainTime, inferTime, precision, recall, f1, auc = evaluate_scratch(unique_modules, data, num_sample_train=num_sample_train,
                                                    num_sample_test=num_sample_test, is_train_rate=is_train_rate)
+
+    accuracis.append(score)
+    precisions.append(precision)
+    recalls.append(recall)
+    f1s.append(f1)
+    aucs.append(auc)
 
     if logOutput:
         out.write(str(cmbId) + ',' +
@@ -90,3 +101,9 @@ for _cmb in range(len(comboList)):
 
         out.close()
     cmbId += 1
+
+print(f'Accuracy: {np.asarray(accuracis).mean()}')
+print(f'Precision: {np.asarray(precisions).mean()}')
+print(f'Recall: {np.asarray(recalls).mean()}')
+print(f'F1: {np.asarray(f1s).mean()}')
+print(f'AUC: {np.asarray(aucs).mean()}')
