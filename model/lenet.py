@@ -9,7 +9,7 @@ from util.data_util import get_mnist_data, get_fmnist_data, loadTensorFlowDatase
 import numpy as np
 
 root = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-model_name = os.path.join(root, 'h5', 'model_mnist1.h5')
+model_name = os.path.join(root, 'h5', 'model_emnist1.h5')
 
 if 'fmnist' in model_name:
     x_train, y_train, x_test, y_test, nb_classes = get_fmnist_data(hot=True)
@@ -60,7 +60,7 @@ model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accur
 print(model.summary())
 
 if 'scratch' not in model_name:
-    epochs = 1
+    epochs = 5
 
     history = model.fit(x_train,
                         y_train,
@@ -89,16 +89,9 @@ precision = precision_score(true_labels, pred, average='weighted')
 # Calculate recall
 recall = recall_score(true_labels, pred, average='weighted')
 
-# Calculate AUC
-# if len(y_test.shape) > 1 and y_test.shape[1] > 1:
-#     auc = roc_auc_score(y_test, pred_probs, multi_class='ovr')
-# else:
-#     auc = roc_auc_score(y_test, pred_probs, multi_class='ovr')
 
-aucs = np.zeros(nb_classes)
-for i in range(nb_classes):
-    aucs[i] = roc_auc_score(y_test[:, i], pred_probs[:, i])
-auc=aucs.mean()
+auc = roc_auc_score(y_test, pred_probs, multi_class='ovr')
+
 
 # Print the results
 print(f'Precision: {precision}')
@@ -106,13 +99,13 @@ print(f'Recall: {recall}')
 print(f'AUC: {auc}')
 
 # Print confusion matrix
-cm = confusion_matrix(true_labels, pred)
-print("Confusion Matrix:\n", cm)
+# cm = confusion_matrix(true_labels, pred)
+# print("Confusion Matrix:\n", cm)
 
 # Print class distribution
-unique, counts = np.unique(true_labels, return_counts=True)
-class_distribution = dict(zip(unique, counts))
-print("Class Distribution:\n", class_distribution)
-
-report = classification_report(true_labels, pred)
-print("\nClassification Report:\n", report)
+# unique, counts = np.unique(true_labels, return_counts=True)
+# class_distribution = dict(zip(unique, counts))
+# print("Class Distribution:\n", class_distribution)
+#
+# report = classification_report(true_labels, pred)
+# print("\nClassification Report:\n", report)

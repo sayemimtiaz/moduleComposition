@@ -12,7 +12,7 @@ num_sample_train = 500
 logOutput = False
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
-end_index = 10
+end_index = 199
 numMemorySample = 500
 positiveRatioInValid = 1.0
 
@@ -99,7 +99,9 @@ for _cmb in range(len(comboList)):
 
     if logOutput:
         out.write(str(cmbId)
-                  + ',' + str(score) + ',' + str(setupTime) + ',' + str(updateTime) + ',' +
+                  + ',' + str(score) + ',' + str(precision) +',' ',' + str(recall) +
+                  ',' + str(f1) + ',' + str(auc)
+                  + str(setupTime) + ',' + str(updateTime) + ',' +
                   str(eval_time)
                   + '\n')
 
