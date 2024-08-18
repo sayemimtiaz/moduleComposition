@@ -189,7 +189,9 @@ def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_te
             x_test_temp = x_test_original[np.where(y_test_original == c)]
             y_test_temp = y_test_original[np.where(y_test_original == c)]
 
-            chosen_index = np.random.choice(range(len(x_test_temp)), min(len(x_test_temp), num_sample_test),
+            num_sample = int(len(x_test_temp)*num_sample_test)
+
+            chosen_index = np.random.choice(range(len(x_test_temp)), min(len(x_test_temp), num_sample),
                                             replace=False)
 
             x_test_temp, y_test_temp = x_test_temp[chosen_index], y_test_temp[chosen_index]
