@@ -9,7 +9,7 @@ import numpy as np
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 num_sample_test = 0.1
 num_sample_train = 500
-logOutput = False
+logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
 end_index = 199
