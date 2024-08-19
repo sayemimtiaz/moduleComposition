@@ -11,7 +11,7 @@ num_sample_test = 0.1
 num_sample_train = 500
 logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
-start_index = 0
+start_index = 100
 end_index = 199
 numMemorySample = 500
 positiveRatioInValid = 1.0
@@ -27,7 +27,7 @@ comboList = load_combos(start=start_index, end=end_index)
 if logOutput:
     out = open(os.path.join(base_path, "result", "ewc_composition" + ".csv"), "w")
     out.write(
-        'Combination ID,Modularized Accuracy,Setup Time,Update Time,Inference Time\n')
+        'Combination ID,Modularized Accuracy,Precision,Recall,F1,AUC,Setup Time,Update Time,Inference Time\n')
     out.close()
 
 cPattern = {}
@@ -99,7 +99,7 @@ for _cmb in range(len(comboList)):
 
     if logOutput:
         out.write(str(cmbId)
-                  + ',' + str(score) + ',' + str(precision) +',' ',' + str(recall) +
+                  + ',' + str(score) + ',' + str(precision) +',' + str(recall) +
                   ',' + str(f1) + ',' + str(auc)
                   + str(setupTime) + ',' + str(updateTime) + ',' +
                   str(eval_time)
