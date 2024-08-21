@@ -39,7 +39,8 @@ def evaluate_ewc(modules, data, num_sample=100, num_module=0):
         for _c in modules[_d]:
             preds[_d][_c] = {}
             for _m in modules[_d][_c]:
-                preds[_d][_c][_m] = modules[_d][_c][_m].predict(xt, verbose=0)
+                t = modules[_d][_c][_m].predict(xt, verbose=0)
+                preds[_d][_c][_m]=t[:,_c]
 
     predLabels = []
     for i in range(0, len(yt)):
@@ -48,7 +49,7 @@ def evaluate_ewc(modules, data, num_sample=100, num_module=0):
         for _d in modules:
             for _c in modules[_d]:
                 for _m in modules[_d][_c]:
-                    pd = preds[_d][_c][_m][i][_c]
+                    pd = preds[_d][_c][_m][i]
                     if maxp is None or maxp < pd:
                         maxp = pd
                         ks = (_d, _c)
