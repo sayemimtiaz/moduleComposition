@@ -9,7 +9,7 @@ import numpy as np
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 num_sample_test = 0.1
 num_sample_train = 500
-logOutput = False
+logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
 end_index = 199
@@ -22,8 +22,8 @@ data = {}
 for _d in datasets:
     data[_d] = load_data_by_name(_d, hot=False)
 
-# comboList = load_combos(start=start_index, end=end_index)
-comboList = load_smallest_comobs(bottom=1)
+comboList = load_combos(start=start_index, end=end_index)
+# comboList = load_smallest_comobs(bottom=1)
 if logOutput:
     out = open(os.path.join(base_path, "result", "ewc_composition" + ".csv"), "w")
     out.write(
