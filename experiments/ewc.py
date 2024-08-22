@@ -8,10 +8,10 @@ import numpy as np
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 num_sample_test = 0.1
-num_sample_train = 500
+num_sample_train = 100
 logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
-start_index = 0
+start_index = 2
 end_index = 199
 numMemorySample = 500
 positiveRatioInValid = 1.0

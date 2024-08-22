@@ -115,7 +115,7 @@ def compute_ewc_penalty_terms(model, old_data, ewc_samples=500, ewc_lambda=0.1, 
     return end - start
 
 
-def train(module_path, new_data, old_data, val_data=None, epochs=100, batch_size=32, learning_rate=1e-3,
+def train(module_path, new_data, old_data, val_data=None, epochs=20, batch_size=32, learning_rate=1e-3,
           use_ewc=False, ewc_lambda=1, ewc_samples=100, prior_mask=None,
           use_fim=False, fim_threshold=1e-3, fim_samples=100,
           use_incdet=False, incdet_thres=1e-9, patience=3):
