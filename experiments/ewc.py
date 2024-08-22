@@ -7,7 +7,7 @@ from util.data_util import load_data_by_name, sample_train_ewc, sample_test_ewc
 import numpy as np
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-num_sample_test = 100
+num_sample_test = 0.1
 num_sample_train = 500
 logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
