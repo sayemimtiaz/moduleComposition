@@ -32,7 +32,7 @@ def evaluate_ewc(modules, data, num_sample=100, num_module=0):
     _, _, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_test=num_sample)
 
     start = time.time()
-
+    print('size of test: ', len(xt))
     preds = {}
     for _d in modules:
         preds[_d] = {}
@@ -41,6 +41,7 @@ def evaluate_ewc(modules, data, num_sample=100, num_module=0):
             for _m in modules[_d][_c]:
                 t = modules[_d][_c][_m].predict(xt, verbose=0)
                 preds[_d][_c][_m]=t[:,_c]
+
 
     predLabels = []
     for i in range(0, len(yt)):
