@@ -5,9 +5,9 @@ from update_concern.ewc_util import evaluate_scratch
 from util.common import load_combos, load_smallest_comobs
 from util.data_util import load_data_by_name
 
-num_sample_test = -1
-num_sample_train = 0.5
-logOutput = False
+num_sample_test = 0.05
+num_sample_train = 1.0
+logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
 end_index = 199
@@ -25,8 +25,8 @@ for _d in datasets:
     # frequency_dict[_d] = dict(zip(unique_values, counts))
     # print(_d, min(counts), max(counts))
 
-# comboList = load_combos(start=start_index, end=end_index)
-comboList = load_smallest_comobs(bottom=5)
+comboList = load_combos(start=start_index, end=end_index)
+# comboList = load_smallest_comobs(bottom=5)
 
 # ratio={}
 # for _cmb in range(len(comboList)):
@@ -58,7 +58,7 @@ comboList = load_smallest_comobs(bottom=5)
 if logOutput:
     out = open(os.path.join(base_path, "result", "scratch_time.csv"), "w")
     out.write(
-        'Combination ID,Model Accuracy,Training Time,Eval Time\n')
+        'Combination ID,Model Accuracy,Precisio,Recall,F1,AUC,Training Time,Eval Time\n')
 
     out.close()
 
@@ -94,9 +94,10 @@ for _cmb in range(len(comboList)):
     aucs.append(auc)
 
     if logOutput:
-        out.write(str(cmbId) + ',' +
-                  str(score) + ',' + str(trainTime)
-                  + ',' + str(inferTime)
+        out.write(str(cmbId)
+                  + ',' + str(score) + ',' + str(precision) +',' + str(recall) +
+                  ',' + str(f1) + ',' + str(auc)
+                  + str(trainTime) + ',' + str(inferTime)
                   + '\n')
 
         out.close()
