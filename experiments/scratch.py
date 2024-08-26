@@ -27,7 +27,7 @@ comboList = load_combos(start=start_index, end=end_index)
 
 
 if logOutput:
-    out = open(os.path.join(base_path, "result", "scratch_time.csv"), "w")
+    out = open(os.path.join(base_path, "result", "scratch.csv"), "w")
     out.write(
         'Combination ID,Model Accuracy,Precisio,Recall,F1,AUC,Training Time,Eval Time\n')
 
