@@ -22,8 +22,8 @@ for _d in datasets:
 
     unique_values, counts = np.unique(data[_d][1], return_counts=True)
 
-# comboList = load_combos(start=start_index, end=end_index)
-comboList = load_smallest_comobs(bottom=1)
+comboList = load_combos(start=start_index, end=end_index)
+# comboList = load_smallest_comobs(bottom=1)
 
 
 if logOutput:
