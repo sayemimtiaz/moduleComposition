@@ -28,8 +28,8 @@ def update_module(module=None, old_train_x=None, old_train_y=None, new_train_x=N
     return result
 
 
-def evaluate_ewc(modules, data, num_sample=100, num_module=0):
-    _, _, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_test=num_sample)
+def evaluate_ewc(modules, data, num_sample=100, num_module=0, seed=19):
+    _, _, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_test=num_sample, seed=seed)
 
     start = time.time()
     print('size of test: ', len(xt))
@@ -91,11 +91,11 @@ def evaluate_ewc(modules, data, num_sample=100, num_module=0):
 
 
 def evaluate_scratch(modules, data,
-                     num_sample_train=-1, num_sample_test=-1, is_train_rate=False):
+                     num_sample_train=-1, num_sample_test=-1, is_train_rate=False, seed=None):
     scratch_model_path = os.path.join(base_path, 'h5', 'model_scratch1' + '.h5')
 
     xT, yT, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_train=num_sample_train,
-                                                            num_sample_test=num_sample_test, is_train_rate=is_train_rate)
+                                                            num_sample_test=num_sample_test, is_train_rate=is_train_rate, seed=seed)
     yT = to_categorical(yT)
     monScore, train_time, infer_time, precision, recall, f1, auc = trainModelAndPredictInBinary(scratch_model_path,
                                                                     xT, yT, xt, yt,

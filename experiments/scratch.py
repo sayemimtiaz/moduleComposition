@@ -7,8 +7,7 @@ from update_concern.ewc_util import evaluate_scratch
 from util.common import load_combos, load_smallest_comobs
 from util.data_util import load_data_by_name
 
-np.random.seed(19)
-random.seed(19)
+eval_seed=19
 
 num_sample_test = 0.05
 num_sample_train = 1.0
@@ -61,7 +60,7 @@ for _cmb in range(len(comboList)):
         unique_modules[_d][_c] = 1
 
     score, trainTime, inferTime, precision, recall, f1, auc = evaluate_scratch(unique_modules, data, num_sample_train=num_sample_train,
-                                                   num_sample_test=num_sample_test, is_train_rate=is_train_rate)
+                                                   num_sample_test=num_sample_test, is_train_rate=is_train_rate, seed=eval_seed)
 
     accuracis.append(score)
     precisions.append(precision)

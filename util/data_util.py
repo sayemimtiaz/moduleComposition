@@ -148,7 +148,7 @@ def unarize(x_train_original, y_train_original, x_test_original, y_test_original
 
 
 def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_test_original, classes, labels,
-                       num_sample_train=-1, num_sample_test=-1, is_train_rate=False):
+                       num_sample_train=-1, num_sample_test=-1, is_train_rate=False, seed=19):
     x_train = []
     y_train = []
 
@@ -185,6 +185,7 @@ def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_te
         y_test = y_test_original[np.where(np.isin(y_test_original, classes))]
     else:
         flag = False
+        np.random.seed(seed)
         for c in classes:
             x_test_temp = x_test_original[np.where(y_test_original == c)]
             y_test_temp = y_test_original[np.where(y_test_original == c)]
@@ -213,7 +214,7 @@ def make_reuse_dataset(x_train_original, y_train_original, x_test_original, y_te
     return x_train, y_train, x_test, y_test
 
 
-def combine_for_reuse(modules, data, num_sample_train=-1, num_sample_test=-1, is_train_rate=False):
+def combine_for_reuse(modules, data, num_sample_train=-1, num_sample_test=-1, is_train_rate=False, seed=19):
     lblCntr = 1
     labels = {}
     flag = False
@@ -230,11 +231,11 @@ def combine_for_reuse(modules, data, num_sample_train=-1, num_sample_test=-1, is
         if not flag:
             xT, yT, xt, yt = make_reuse_dataset(data[_d][0], data[_d][1], data[_d][2],
                                                 data[_d][3], classes, tmp_labels, num_sample_train=num_sample_train,
-                                                num_sample_test=num_sample_test, is_train_rate=is_train_rate)
+                                                num_sample_test=num_sample_test, is_train_rate=is_train_rate, seed=seed)
         else:
             xT1, yT1, xt1, yt1 = make_reuse_dataset(data[_d][0], data[_d][1], data[_d][2],
                                                     data[_d][3], classes, tmp_labels, num_sample_train=num_sample_train,
-                                                    num_sample_test=num_sample_test, is_train_rate=is_train_rate)
+                                                    num_sample_test=num_sample_test, is_train_rate=is_train_rate, seed=seed)
             xT = np.concatenate((xT, xT1))
             yT = np.concatenate((yT, yT1))
             xt = np.concatenate((xt, xt1))
@@ -269,7 +270,7 @@ def getIndexesMatchingSubset(Y, match):
     return indexes
 
 
-def sample(data, num_sample=-1, num_classes=None, balance=True, sample_only_classes=None, seed=None):
+def sample(data, num_sample=-1, num_classes=None, balance=True, sample_only_classes=None, seed=None, sample_in_rate=False):
     data_x, data_y = data
     data_y = makeScalar(data_y)
     flag = {}
@@ -280,7 +281,7 @@ def sample(data, num_sample=-1, num_classes=None, balance=True, sample_only_clas
 
     if sample_only_classes is not None:
         num_classes = len(sample_only_classes)
-    if balance and num_sample > 0:
+    if not sample_in_rate and balance and num_sample > 0:
         num_sample = int(math.ceil(num_sample / num_classes))
     for y in data_y:
         if y in flag:
@@ -290,11 +291,15 @@ def sample(data, num_sample=-1, num_classes=None, balance=True, sample_only_clas
         flag[y] = 1
 
         class_all_index = getIndexesMatchingSubset(data_y, [y])
+        if sample_in_rate:
+            num_sample_actual=int(num_sample*len(class_all_index))
+        else:
+            num_sample_actual=num_sample
 
-        if num_sample == -1 or num_sample > len(class_all_index):
+        if num_sample_actual == -1 or num_sample_actual > len(class_all_index):
             chosen_index = np.random.choice(class_all_index, len(class_all_index), replace=False)
         else:
-            chosen_index = np.random.choice(class_all_index, num_sample, replace=False)
+            chosen_index = np.random.choice(class_all_index, num_sample_actual, replace=False)
         all_chosen_index.extend(chosen_index)
 
     np.random.shuffle(all_chosen_index)
@@ -314,7 +319,7 @@ def load_data_by_name(dataset, hot=True):
 
 def sample_train_ewc(data, targetMod, combo, negativeModule, positiveModule,
                      num_sample=500, seed=19,
-                     includePositive=True, numMemorySample=1):
+                     includePositive=True, numMemorySample=1, sample_rate_train=True):
     x = {}
     i = 0
     temp_y = []
@@ -324,7 +329,7 @@ def sample_train_ewc(data, targetMod, combo, negativeModule, positiveModule,
         if (d, c, m) == targetMod:
             continue
         x[i], _ = sample((data[d][0], data[d][1]), sample_only_classes=[c],
-                         balance=True, num_sample=num_sample, seed=seed)
+                         balance=True, num_sample=num_sample, seed=seed, sample_in_rate=sample_rate_train)
         negSampleCount += len(x[i])
         for j in range(len(x[i])):
             temp_y.append(negativeModule)
@@ -355,7 +360,7 @@ def sample_train_ewc(data, targetMod, combo, negativeModule, positiveModule,
 
 
 def sample_test_ewc(data, targetMod, combo, negativeModule, positiveModule,
-                    num_sample=50, seed=19, positiveRatio=1):
+                    num_sample=50, seed=1, positiveRatio=1, sample_rate=False):
     x = {}
     i = 0
     temp_y = []
@@ -365,7 +370,7 @@ def sample_test_ewc(data, targetMod, combo, negativeModule, positiveModule,
         if (d, c, m) == targetMod:
             continue
         x[i], _ = sample((data[d][2], data[d][3]), sample_only_classes=[c],
-                         balance=True, num_sample=num_sample, seed=seed)
+                         balance=True, num_sample=num_sample, seed=seed, sample_in_rate=sample_rate)
         negSampleCount += len(x[i])
         for j in range(len(x[i])):
             temp_y.append(negativeModule)
