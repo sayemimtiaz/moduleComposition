@@ -100,7 +100,7 @@ for _cmb in range(len(comboList)):
     if logOutput:
         out.write(str(cmbId)
                   + ',' + str(score) + ',' + str(precision) +',' + str(recall) +
-                  ',' + str(f1) + ',' + str(auc)
+                  ',' + str(f1) + ',' + str(auc)+','
                   + str(setupTime) + ',' + str(updateTime) + ',' +
                   str(eval_time)
                   + '\n')

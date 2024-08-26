@@ -1,15 +1,20 @@
 import os
+import random
+
 from keras.models import load_model
 import numpy as np
 from update_concern.ewc_util import evaluate_scratch
 from util.common import load_combos, load_smallest_comobs
 from util.data_util import load_data_by_name
 
+np.random.seed(19)
+random.seed(19)
+
 num_sample_test = 0.05
 num_sample_train = 1.0
-logOutput = False
+logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
-start_index = 0
+start_index = 10
 end_index = 199
 is_train_rate = True
 
@@ -67,7 +72,7 @@ for _cmb in range(len(comboList)):
     if logOutput:
         out.write(str(cmbId)
                   + ',' + str(score) + ',' + str(precision) +',' + str(recall) +
-                  ',' + str(f1) + ',' + str(auc)
+                  ',' + str(f1) + ',' + str(auc)+','
                   + str(trainTime) + ',' + str(inferTime)
                   + '\n')
 
