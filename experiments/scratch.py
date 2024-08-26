@@ -7,7 +7,7 @@ from util.data_util import load_data_by_name
 
 num_sample_test = 0.05
 num_sample_train = 1.0
-logOutput = True
+logOutput = False
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
 end_index = 199
@@ -22,8 +22,8 @@ for _d in datasets:
 
     unique_values, counts = np.unique(data[_d][1], return_counts=True)
 
-comboList = load_combos(start=start_index, end=end_index)
-# comboList = load_smallest_comobs(bottom=5)
+# comboList = load_combos(start=start_index, end=end_index)
+comboList = load_smallest_comobs(bottom=1)
 
 
 if logOutput:
@@ -41,7 +41,7 @@ aucs=[]
 accuracis=[]
 for _cmb in range(len(comboList)):
     if logOutput:
-        out = open(os.path.join(base_path, "result", "scratch_time.csv"), "a")
+        out = open(os.path.join(base_path, "result", "scratch.csv"), "a")
 
     unique_modules = {}
     tmp_update_time = []
