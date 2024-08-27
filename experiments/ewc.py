@@ -11,8 +11,8 @@ eval_seed=19
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 num_sample_test = 0.05
-num_sample_train = 0.05
-num_sample_valid=0.05
+num_sample_train = 0.02
+num_sample_valid=0.03
 sample_rate_train=True
 logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
