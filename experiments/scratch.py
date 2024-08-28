@@ -13,7 +13,7 @@ num_sample_test = 0.05
 num_sample_train = 1.0
 logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
-start_index = 10
+start_index = 0
 end_index = 199
 is_train_rate = True
 
