@@ -7,7 +7,8 @@ from util.common import load_combos, load_smallest_comobs
 from util.data_util import load_data_by_name, \
     sample
 
-num_sample_test = 100
+eval_seed=19
+num_sample_test = 0.05
 num_sample_train = 10000
 logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
@@ -25,7 +26,7 @@ comboList = load_combos(start=start_index, end=end_index)
 if logOutput:
     out = open(os.path.join(base_path, "result", "sc_composition" + ".csv"), "w")
     out.write(
-        'Combination ID,Modularized Accuracy,Setup Time,Inference Time\n')
+        'Combination ID,Modularized Accuracy,Precision,Recall,F1,AUC,Setup Time,Inference Time\n')
     out.close()
 
 cPattern = {}
@@ -62,10 +63,11 @@ for _cmb in range(len(comboList)):
         modules[_d][_c][_m] = module
 
     setupTime /= moduleCount[_cmb]
-    score, eval_time = evaluate_sc(modules, data, cPattern, num_sample=num_sample_test, num_module=moduleCount[_cmb])
+    score, eval_time,precision, recall, f1, auc = evaluate_sc(modules, data, cPattern, num_sample=num_sample_test, num_module=moduleCount[_cmb], seed=eval_seed)
     if logOutput:
         out.write(str(cmbId)
-                  + ',' + str(score) + ',' + str(setupTime) + ',' + str(eval_time)
+                  + ',' + str(score) + ',' + str(precision) +',' + str(recall) +
+                  ',' + str(f1) + ',' + str(auc)+',' + str(setupTime) + ',' + str(eval_time)
                   + '\n')
 
         out.close()

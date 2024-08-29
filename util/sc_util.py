@@ -1,9 +1,10 @@
 import time
 
+import keras
 import tensorflow as tf
 from keras.layers import Dropout, Activation, Flatten, AveragePooling2D, Conv2D, Dense
 import numpy as np
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 from util.data_util import combine_for_reuse
 
 
@@ -87,8 +88,8 @@ def getDistance(mean, std, obs):
 
 
 def evaluate_sc(modules, data, cPattern,
-                num_sample=100, num_module=0):
-    _, _, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_test=num_sample)
+                num_sample=100, num_module=0, seed=None):
+    _, _, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_test=num_sample, seed=seed)
 
     predLabels = []
     start = time.time()
@@ -133,11 +134,30 @@ def evaluate_sc(modules, data, cPattern,
     modScore = accuracy_score(predLabels, np.asarray(yt).flatten())
     end = time.time()
 
+    precision = precision_score(np.asarray(yt).flatten(), predLabels, average='macro')
+    recall = recall_score(np.asarray(yt).flatten(), predLabels, average='macro')
+    f1 = f1_score(np.asarray(yt).flatten(), predLabels, average='macro')
+    y_test = keras.utils.to_categorical(np.asarray(yt).flatten(), num_classes=num_classes)
+    pred_probs = keras.utils.to_categorical(predLabels, num_classes=num_classes)
+    aucs = []
+    for i in range(num_classes):
+        try:
+            aucs.append(roc_auc_score(y_test[:, i], pred_probs[:, i]))
+        except:
+            pass
+    auc = np.asarray(aucs).mean()
+
+    print(f'Accuracy: {modScore}')
+    print(f'Precision: {precision}')
+    print(f'Recall: {recall}')
+    print(f'F1: {f1}')
+    print(f'AUC: {auc}')
+
     inferTime = (end - start) / len(yt)
     inferTime /= num_module
     print("Modularized Accuracy: " + str(modScore))
 
-    return modScore, inferTime
+    return modScore, inferTime,precision, recall, f1, auc
 
 
 def evaluate_logit(modules, data,
