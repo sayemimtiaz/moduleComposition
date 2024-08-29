@@ -7,12 +7,13 @@ from util.common import load_combos, getStackedLeNet, trainDynamicInterface, loa
 from util.data_util import load_data_by_name, combine_for_reuse
 import numpy as np
 
-num_sample_test = -1
+eval_seed=19
+num_sample_test = 0.05
 num_sample_train = -1
-logOutput = False
+logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
-end_index = 10
+end_index = 199
 featureCnn=True
 
 base_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -35,7 +36,7 @@ comboList = load_combos(start=start_index, end=end_index)
 if logOutput:
     out = open(os.path.join(base_path, "result", "dynamic_composition" + ".csv"), "w")
     out.write(
-        'Combination ID,Modularized Accuracy,Training Time,Inference Time\n')
+        'Combination ID,Modularized Accuracy,Precision,Recall,F1,AUC,Training Time,Inference Time\n')
 
     out.close()
 
@@ -69,7 +70,7 @@ for _cmb in range(len(comboList)):
     cModel, numMod = getStackedLeNet(modules, featureCnn=featureCnn)
 
     xT, yT, xt, yt, labels, num_classes = combine_for_reuse(modules, data, num_sample_train=num_sample_train,
-                                                            num_sample_test=num_sample_test)
+                                                            num_sample_test=num_sample_test, seed=eval_seed)
     yT = to_categorical(yT)
 
     score, train_time, eval_time,precision, recall, f1, auc = trainDynamicInterface(cModel, numMod, xT, yT, xt, yt,nb_classes=num_classes,featureCnn=featureCnn)
@@ -84,7 +85,9 @@ for _cmb in range(len(comboList)):
     if logOutput:
         print(score,train_time,eval_time)
         out.write(str(cmbId)
-                  + ',' + str(score) + ',' + str(train_time) + ',' + str(eval_time)
+                  + ',' + str(score) + ',' + str(precision) +',' + str(recall) +
+                  ',' + str(f1) + ',' + str(auc)+','
+                  + str(train_time) + ',' + str(eval_time)
                   + '\n')
 
         out.close()
