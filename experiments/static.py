@@ -8,8 +8,8 @@ from util.common import load_combos, load_smallest_comobs
 from util.data_util import load_data_by_name, \
     sample
 
-num_sample_test = 100
-num_sample_train = 10000
+eval_seed=19
+num_sample_test = 0.05
 logOutput = True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
@@ -26,7 +26,7 @@ comboList = load_combos(start=start_index, end=end_index)
 if logOutput:
     out = open(os.path.join(base_path, "result", "static" + ".csv"), "w")
     out.write(
-        'Combination ID,Modularized Accuracy,Inference Time\n')
+        'Combination ID,Modularized Accuracy,Precision,Recall,F1,AUC,Inference Time\n')
     out.close()
 
 moduleCount = {}
@@ -49,20 +49,22 @@ for _cmb in range(len(comboList)):
         if _c not in modules[_d]:
             modules[_d][_c] = {}
 
-        # module = load_model(os.path.join(base_path, 'modules', 'model_' + _d + str(_m),
-        #                                  'module' + str(_c) + '.h5'))
-        #
-        # modules[_d][_c][_m] = module
-    #
-    # score, eval_time = evaluate_ewc(modules, data,
-    #                                 num_sample=num_sample_test,
-    #                                 num_module=moduleCount[_cmb])
-    # if logOutput:
-    #     out.write(str(cmbId)
-    #               + ',' + str(score) + ',' + str(eval_time)
-    #               + '\n')
-    #
-    #     out.close()
+        module = load_model(os.path.join(base_path, 'modules', 'model_' + _d + str(_m),
+                                         'module' + str(_c) + '.h5'))
+
+        modules[_d][_c][_m] = module
+
+    score, eval_time,precision, recall, f1, auc= evaluate_ewc(modules, data,
+                                    num_sample=num_sample_test,
+                                    num_module=moduleCount[_cmb], seed=eval_seed)
+    if logOutput:
+        out.write(str(cmbId)
+                  + ',' + str(score) + ',' + str(precision) +',' + str(recall) +
+                  ',' + str(f1) + ',' + str(auc)+','+
+                  str(eval_time)
+                  + '\n')
+
+        out.close()
     cmbId += 1
 
 print(totalModule/len(comboList))
