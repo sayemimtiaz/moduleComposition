@@ -30,7 +30,7 @@ comboList = load_combos(start=start_index, end=end_index)
 if logOutput:
     out = open(os.path.join(base_path, "result", "no_ewc" + ".csv"), "w")
     out.write(
-        'Combination ID,Modularized Accuracy,Setup Time,Update Time,Inference Time\n')
+        'Combination ID,Modularized Accuracy,Precision,Recall,F1,AUC,Setup Time,Update Time,Inference Time\n')
     out.close()
 
 cPattern = {}
