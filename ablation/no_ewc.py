@@ -5,10 +5,14 @@ from update_concern.ewc_util import update_module, evaluate_ewc
 from util.common import load_smallest_comobs, load_combos
 from util.data_util import load_data_by_name, sample_train_ewc, sample_test_ewc
 
+eval_seed=19
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-num_sample_test = 100
-num_sample_train = 500
+num_sample_test = 0.05
+num_sample_train = 0.01
+num_sample_valid=0.03
 logOutput = True
+sample_rate_train=True
 datasets = ['mnist', 'fmnist', 'kmnist', 'emnist']
 start_index = 0
 end_index = 49
@@ -61,11 +65,11 @@ for _cmb in range(len(comboList)):
                                   negativeModule, positiveModule,
                                   num_sample=num_sample_train,
                                   includePositive=True,
-                                  numMemorySample=numMemorySample)
+                                  numMemorySample=numMemorySample, sample_rate_train=sample_rate_train, seed=89)
         val_data = sample_test_ewc(data, (_d, _c, _m), comboList[_cmb],
                                    negativeModule,
                                    positiveModule,
-                                   positiveRatio=positiveRatioInValid)
+                                   positiveRatio=positiveRatioInValid,num_sample=num_sample_valid,sample_rate=sample_rate_train, seed=29)
 
         curSetupTime, curUpdateTime = update_module(module_path, data[_d][0], data[_d][1], nx, ny, val_data=val_data, use_ewc=False)
         setupTime += curSetupTime
@@ -79,12 +83,14 @@ for _cmb in range(len(comboList)):
     setupTime /= moduleCount[_cmb]
     updateTime /= moduleCount[_cmb]
 
-    score, eval_time = evaluate_ewc(modules, data,
+    score, eval_time,precision, recall, f1, auc = evaluate_ewc(modules, data,
                                     num_sample=num_sample_test,
-                                    num_module=moduleCount[_cmb])
+                                    num_module=moduleCount[_cmb], seed=eval_seed)
     if logOutput:
         out.write(str(cmbId)
-                  + ',' + str(score) + ',' + str(setupTime) + ',' + str(updateTime) + ',' +
+                  + ',' + str(score) + ',' + str(precision) + ',' + str(recall) +
+                  ',' + str(f1) + ',' + str(auc) + ','
+                  + str(setupTime) + ',' + str(updateTime) + ',' +
                   str(eval_time)
                   + '\n')
 
