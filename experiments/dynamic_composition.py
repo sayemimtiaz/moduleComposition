@@ -65,7 +65,7 @@ for _cmb in range(len(comboList)):
         module = load_model(os.path.join(base_path, 'modules', 'model_' + _d + str(_m),
                                          'module' + str(_c) + '.h5'))
 
-        modules[_d][_c][_m] = None
+        modules[_d][_c][_m] = module
 
     cModel, numMod = getStackedLeNet(modules, featureCnn=featureCnn)
 
