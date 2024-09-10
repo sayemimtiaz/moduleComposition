@@ -436,25 +436,13 @@ def trainDynamicInterface(cMod, numMod, X_train, Y_train, X_test, Y_test, epochs
 
     train_time = stack_time + (end - start)
 
-    # X_test, stack_time = getStackedPredict(modules, X_test)
     start = time.time()
     X_test = cMod.predict(X_test, verbose=0)
     end = time.time()
+    stack_time = (end - start) / numMod
+    stack_time=stack_time / len(X_test)
 
-    # stack_time = (end - start) / numMod
-    #
-    # start = time.time()
-    # pred = model.predict(X_test[:len(Y_test)], verbose=0)
-    # pred = pred.argmax(axis=-1)
-    # score = accuracy_score(pred, Y_test[:len(Y_test)])
-    # end = time.time()
-    # infer_time = end - start
-    # infer_time /= len(X_test)
-    # infer_time += (stack_time / len(X_test))
-    # return score, train_time, infer_time
 
-    end = time.time()
-    train_time = end - start
     start = time.time()
     pred_probs = model.predict(X_test[:len(Y_test)], verbose=verbose)
     pred = pred_probs.argmax(axis=-1)
@@ -484,15 +472,17 @@ def trainDynamicInterface(cMod, numMod, X_train, Y_train, X_test, Y_test, epochs
             pass
     auc = np.asarray(aucs).mean()
 
+
+    end = time.time()
+    eval_time = (end - start) / len(X_test)
+    eval_time+=stack_time
+
     # Print the results
     print(f'Accuracy: {score}')
     print(f'Precision: {precision}')
     print(f'Recall: {recall}')
     print(f'F1: {f1}')
     print(f'AUC: {auc}')
-
-    end = time.time()
-    eval_time = (end - start) / len(X_test)
 
     return score, train_time, eval_time, precision, recall, f1, auc
 

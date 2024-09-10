@@ -15,6 +15,7 @@ msFile = os.path.join(base_path, "result", "ms" + ".csv")
 scratchFile = os.path.join(base_path, "result", "scratch" + ".csv")
 scFile = os.path.join(base_path, "result", "sc" + ".csv")
 
+static_keys=set()
 static_acc = {}
 with open(staticFile) as csv_file:
     csv_reader = csv.reader(csv_file)
@@ -22,45 +23,55 @@ with open(staticFile) as csv_file:
 
     for (serial, row) in enumerate(csv_reader):
         static_acc[row[0].strip()] = round(float(row[1].strip()) * 100.0, 2)
+        static_keys.add(row[0].strip())
 
 ms_acc = {}
+ms_keys=set()
 with open(msFile) as csv_file:
     csv_reader = csv.reader(csv_file)
     next(csv_reader)
 
     for (serial, row) in enumerate(csv_reader):
         ms_acc[row[0].strip()] = round(float(row[1].strip()) * 100.0, 2)
+        ms_keys.add(row[0].strip())
 
 mu_acc = {}
+mu_keys=set()
 with open(muFile) as csv_file:
     csv_reader = csv.reader(csv_file)
     next(csv_reader)
 
     for (serial, row) in enumerate(csv_reader):
         mu_acc[row[0].strip()] = round(float(row[1].strip()) * 100.0, 2)
+        mu_keys.add(row[0].strip())
 
 scratch_acc = {}
+scratch_keys=set()
 with open(scratchFile) as csv_file:
     csv_reader = csv.reader(csv_file)
     next(csv_reader)
 
     for (serial, row) in enumerate(csv_reader):
         scratch_acc[row[0].strip()] = round(float(row[1].strip()) * 100.0, 2)
+        scratch_keys.add(row[0].strip())
 
 sc_acc = {}
+sc_keys=set()
 with open(scFile) as csv_file:
     csv_reader = csv.reader(csv_file)
     next(csv_reader)
 
     for (serial, row) in enumerate(csv_reader):
         sc_acc[row[0].strip()] = round(float(row[1].strip()) * 100.0, 2)
+        sc_keys.add(row[0].strip())
 
 comboList = load_combos(start=0, end=199)
 
 ds_sum = {}
 mod_sum = {}
 
-for cmbId in mu_acc.keys():
+common_keys=static_keys.intersection(ms_keys).intersection(mu_keys).intersection(sc_keys).intersection(scratch_keys)
+for cmbId in common_keys:
 
     no_ds = set()
     no_mod = len(comboList[int(cmbId)])
